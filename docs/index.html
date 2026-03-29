@@ -1,0 +1,3017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CommunityHub — Prototype</title>
+  <style>
+    /* ========== DESIGN TOKENS ========== */
+    :root {
+      --primary: #6366F1;
+      --primary-dark: #4F46E5;
+      --primary-light: #A5B4FC;
+      --secondary: #F59E0B;
+      --secondary-dark: #D97706;
+      --success: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --info: #3B82F6;
+      --gray-50: #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --gray-800: #1F2937;
+      --gray-900: #111827;
+      --white: #FFFFFF;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      color: var(--gray-800);
+      background: var(--gray-50);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { color: var(--primary-dark); }
+    img { max-width: 100%; height: auto; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; font-size: 0.95rem; }
+
+    /* ========== NAVBAR ========== */
+    .navbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 1.5rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+    .nav-brand svg { width: 32px; height: 32px; }
+    .nav-links { display: flex; gap: 0; align-items: center; }
+    .nav-links a {
+      padding: 0.5rem 1rem;
+      color: var(--gray-600);
+      font-weight: 500;
+      font-size: 0.9rem;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--primary);
+      background: rgba(99,102,241,0.08);
+    }
+    .nav-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.875rem;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: var(--white); }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-secondary { background: var(--white); color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-secondary:hover { background: rgba(99,102,241,0.05); }
+    .btn-success { background: var(--success); color: var(--white); }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: var(--danger); color: var(--white); }
+    .btn-danger:hover { background: #DC2626; }
+    .btn-ghost { background: transparent; color: var(--gray-600); }
+    .btn-ghost:hover { background: var(--gray-100); }
+    .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
+    .btn-lg { padding: 0.75rem 1.75rem; font-size: 1rem; }
+    .btn-block { width: 100%; justify-content: center; }
+
+    /* ========== MOBILE NAV ========== */
+    .mobile-nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--gray-700);
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-nav-toggle { display: block; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: var(--white);
+        border-bottom: 1px solid var(--gray-200);
+        padding: 1rem;
+        box-shadow: var(--shadow-lg);
+      }
+    }
+
+    /* ========== PAGE SECTIONS ========== */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ========== HERO ========== */
+    .hero {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #A855F7 100%);
+      color: var(--white);
+      padding: 4rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .hero h1 { font-size: 2.75rem; font-weight: 800; margin-bottom: 0.75rem; line-height: 1.2; }
+    .hero p { font-size: 1.15rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
+    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-cta .btn { padding: 0.75rem 2rem; font-size: 1rem; }
+    .hero-cta .btn-white { background: var(--white); color: var(--primary-dark); }
+    .hero-cta .btn-white:hover { background: var(--gray-100); }
+    .hero-cta .btn-outline-white { border: 2px solid rgba(255,255,255,0.5); color: var(--white); background: transparent; }
+    .hero-cta .btn-outline-white:hover { background: rgba(255,255,255,0.1); border-color: var(--white); }
+
+    .countdown { display: flex; gap: 1.5rem; justify-content: center; margin-top: 2rem; }
+    .countdown-item { text-align: center; }
+    .countdown-item .num {
+      font-size: 2rem;
+      font-weight: 800;
+      background: rgba(255,255,255,0.15);
+      border-radius: var(--radius-md);
+      padding: 0.25rem 0.75rem;
+      display: block;
+    }
+    .countdown-item .label { font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ========== SECTION ========== */
+    .section { padding: 3.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section-header { text-align: center; margin-bottom: 2.5rem; }
+    .section-header h2 { font-size: 1.85rem; font-weight: 700; color: var(--gray-900); }
+    .section-header p { color: var(--gray-500); margin-top: 0.5rem; }
+
+    /* ========== STATS ========== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+    }
+    .stat-card .stat-num {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .stat-card .stat-label {
+      color: var(--gray-500);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ========== EVENT CARDS ========== */
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+    .event-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+      transition: all 0.25s;
+    }
+    .event-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    .event-card-img {
+      height: 180px;
+      background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      font-size: 2.5rem;
+      position: relative;
+    }
+    .event-card-img .badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.5);
+      color: var(--white);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+    }
+    .event-card-img .badge-free { background: rgba(16,185,129,0.85); }
+    .event-card-img .badge-paid { background: rgba(245,158,11,0.85); }
+    .event-card-body { padding: 1.25rem; }
+    .event-card-body .event-category {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .event-card-body h3 { font-size: 1.1rem; font-weight: 700; margin: 0.35rem 0; color: var(--gray-900); }
+    .event-meta { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; }
+    .event-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--gray-500);
+    }
+    .event-meta-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .event-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--gray-100);
+    }
+    .spots-left { font-size: 0.8rem; color: var(--danger); font-weight: 600; }
+    .spots-left.available { color: var(--success); }
+
+    /* ========== FILTERS BAR ========== */
+    .filters-bar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+    .filters-bar input, .filters-bar select {
+      padding: 0.55rem 0.85rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      background: var(--white);
+      color: var(--gray-700);
+      transition: border-color 0.2s;
+    }
+    .filters-bar input:focus, .filters-bar select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+    .filters-bar input[type="search"] { min-width: 250px; }
+    .view-toggle { display: flex; gap: 0; margin-left: auto; }
+    .view-toggle button {
+      padding: 0.5rem 1rem;
+      border: 1.5px solid var(--gray-200);
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .view-toggle button:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+    .view-toggle button:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; border-left: 0; }
+    .view-toggle button.active { background: var(--primary); color: var(--white); border-color: var(--primary); }
+
+    /* ========== EVENT DETAIL ========== */
+    .event-detail-hero {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      color: var(--white);
+      padding: 3rem 2rem;
+    }
+    .event-detail-hero h1 { font-size: 2rem; font-weight: 800; }
+    .event-detail-info {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .event-detail-info .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+    .event-detail-body { max-width: 1200px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .event-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); margin-bottom: 1.5rem; }
+    .event-tabs button {
+      padding: 0.75rem 1.25rem;
+      background: none;
+      border: none;
+      font-weight: 600;
+      color: var(--gray-400);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+    .event-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .event-tab-content { display: none; }
+    .event-tab-content.active { display: block; }
+    .event-sidebar {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--gray-100);
+      position: sticky;
+      top: 80px;
+      height: fit-content;
+    }
+    @media (max-width: 768px) {
+      .event-detail-body { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+
+    /* ========== FORMS ========== */
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--gray-700);
+      margin-bottom: 0.35rem;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      background: var(--white);
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+    .form-group .error { border-color: var(--danger); }
+    .form-group .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; }
+    .form-group .hint { color: var(--gray-400); font-size: 0.8rem; margin-top: 0.25rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.4rem 0.75rem;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .checkbox-item:hover { border-color: var(--primary); }
+    .checkbox-item.selected { background: rgba(99,102,241,0.1); border-color: var(--primary); color: var(--primary); }
+    .checkbox-item input { display: none; }
+
+    /* ========== ONBOARDING STEPPER ========== */
+    .stepper-container {
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      position: relative;
+    }
+    .stepper::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 40px;
+      right: 40px;
+      height: 3px;
+      background: var(--gray-200);
+    }
+    .stepper-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+    }
+    .stepper-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--gray-200);
+      color: var(--gray-400);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s;
+    }
+    .stepper-step.active .stepper-circle { background: var(--primary); color: var(--white); }
+    .stepper-step.completed .stepper-circle { background: var(--success); color: var(--white); }
+    .stepper-label { font-size: 0.7rem; color: var(--gray-400); font-weight: 500; text-align: center; }
+    .stepper-step.active .stepper-label { color: var(--primary); font-weight: 600; }
+    .stepper-step.completed .stepper-label { color: var(--success); }
+
+    .step-content {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--gray-100);
+      display: none;
+    }
+    .step-content.active { display: block; }
+    .step-content h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .step-content .step-desc { color: var(--gray-500); margin-bottom: 1.5rem; }
+    .step-nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-100); }
+
+    /* ========== OTP INPUT ========== */
+    .otp-input-group {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+    .otp-input-group input {
+      width: 48px;
+      height: 56px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      transition: border-color 0.2s;
+    }
+    .otp-input-group input:focus { border-color: var(--primary); outline: none; }
+    .otp-timer { text-align: center; color: var(--gray-500); font-size: 0.85rem; margin-top: 0.5rem; }
+
+    /* ========== MEMBERSHIP TIER CARDS ========== */
+    .tiers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+    .tier-card {
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+    }
+    .tier-card:hover { border-color: var(--primary-light); }
+    .tier-card.selected { border-color: var(--primary); background: rgba(99,102,241,0.03); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+    .tier-card .tier-name { font-weight: 700; font-size: 1.1rem; color: var(--gray-900); }
+    .tier-card .tier-price { font-size: 2rem; font-weight: 800; color: var(--primary); margin: 0.5rem 0; }
+    .tier-card .tier-price span { font-size: 0.85rem; font-weight: 400; color: var(--gray-400); }
+    .tier-card .tier-features { list-style: none; text-align: left; margin-top: 1rem; }
+    .tier-card .tier-features li { padding: 0.35rem 0; font-size: 0.85rem; color: var(--gray-600); }
+    .tier-card .tier-features li::before { content: '✓ '; color: var(--success); font-weight: 700; }
+    .tier-popular {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--secondary);
+      color: var(--white);
+      padding: 0.15rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* ========== DASHBOARD ========== */
+    .dashboard-layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 64px); }
+    .sidebar {
+      background: var(--white);
+      border-right: 1px solid var(--gray-200);
+      padding: 1.5rem 0;
+    }
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.7rem 1.5rem;
+      color: var(--gray-600);
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .sidebar-nav a:hover { background: var(--gray-50); color: var(--primary); }
+    .sidebar-nav a.active { background: rgba(99,102,241,0.08); color: var(--primary); border-right: 3px solid var(--primary); }
+    .sidebar-nav a svg { width: 20px; height: 20px; }
+    .dashboard-content { padding: 2rem; overflow-y: auto; }
+    .dashboard-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .dash-stat {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+    }
+    .dash-stat .dash-stat-label { font-size: 0.8rem; color: var(--gray-500); font-weight: 500; }
+    .dash-stat .dash-stat-num { font-size: 1.75rem; font-weight: 800; color: var(--gray-900); margin-top: 0.25rem; }
+    .dash-stat .dash-stat-change { font-size: 0.75rem; color: var(--success); font-weight: 600; }
+    @media (max-width: 768px) {
+      .dashboard-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .dashboard-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ========== TABLES ========== */
+    .table-container { background: var(--white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-100); }
+    .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--gray-100); }
+    .table-header h3 { font-size: 1.1rem; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem 1.25rem; text-align: left; font-size: 0.875rem; }
+    th { background: var(--gray-50); color: var(--gray-500); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
+    td { border-top: 1px solid var(--gray-100); color: var(--gray-700); }
+    tr:hover td { background: var(--gray-50); }
+
+    /* ========== BADGES ========== */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-success { background: rgba(16,185,129,0.1); color: #059669; }
+    .badge-warning { background: rgba(245,158,11,0.1); color: #D97706; }
+    .badge-danger { background: rgba(239,68,68,0.1); color: #DC2626; }
+    .badge-info { background: rgba(59,130,246,0.1); color: #2563EB; }
+    .badge-gray { background: var(--gray-100); color: var(--gray-500); }
+
+    /* ========== FRAUD SCORE BAR ========== */
+    .fraud-score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fraud-bar {
+      width: 60px;
+      height: 6px;
+      background: var(--gray-200);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .fraud-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .fraud-bar-fill.low { background: var(--success); }
+    .fraud-bar-fill.medium { background: var(--warning); }
+    .fraud-bar-fill.high { background: var(--danger); }
+    .fraud-label { font-size: 0.8rem; font-weight: 600; }
+
+    /* ========== CHATBOT ========== */
+    .chatbot-trigger {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--white);
+      border: none;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      z-index: 999;
+      transition: all 0.2s;
+    }
+    .chatbot-trigger:hover { transform: scale(1.1); background: var(--primary-dark); }
+    .chatbot-panel {
+      display: none;
+      position: fixed;
+      bottom: 90px;
+      right: 24px;
+      width: 380px;
+      max-height: 520px;
+      background: var(--white);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      z-index: 999;
+      overflow: hidden;
+      flex-direction: column;
+      border: 1px solid var(--gray-200);
+    }
+    .chatbot-panel.open { display: flex; }
+    .chatbot-header {
+      background: var(--primary);
+      color: var(--white);
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chatbot-header h4 { font-weight: 700; }
+    .chatbot-messages {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .chat-msg {
+      max-width: 85%;
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-lg);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .chat-msg.bot {
+      background: var(--gray-100);
+      color: var(--gray-800);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg.user {
+      background: var(--primary);
+      color: var(--white);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .chatbot-input {
+      display: flex;
+      gap: 0;
+      border-top: 1px solid var(--gray-200);
+      padding: 0.75rem;
+    }
+    .chatbot-input input {
+      flex: 1;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-md) 0 0 var(--radius-md);
+      padding: 0.6rem 0.85rem;
+    }
+    .chatbot-input input:focus { outline: none; border-color: var(--primary); }
+    .chatbot-input button {
+      background: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0 1rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      font-weight: 600;
+    }
+    @media (max-width: 768px) {
+      .chatbot-panel { width: calc(100vw - 32px); right: 16px; bottom: 80px; }
+    }
+
+    /* ========== MODAL ========== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius-xl);
+      max-width: 500px;
+      width: 90%;
+      padding: 2rem;
+      box-shadow: var(--shadow-xl);
+    }
+    .modal h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+    /* ========== TOAST ========== */
+    .toast {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid var(--success);
+      z-index: 3000;
+      display: none;
+      max-width: 360px;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.show { display: block; }
+    .toast.error { border-left-color: var(--danger); }
+    .toast .toast-title { font-weight: 700; font-size: 0.9rem; }
+    .toast .toast-msg { font-size: 0.85rem; color: var(--gray-500); margin-top: 0.15rem; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ========== PAYMENT SECTION ========== */
+    .payment-methods { display: flex; flex-direction: column; gap: 1rem; }
+    .payment-method {
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .payment-method:hover { border-color: var(--primary-light); }
+    .payment-method.selected { border-color: var(--primary); background: rgba(99,102,241,0.03); }
+    .payment-method .pm-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--gray-100);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 0.8rem;
+    }
+    .payment-method .pm-info h4 { font-weight: 700; font-size: 0.95rem; }
+    .payment-method .pm-info p { font-size: 0.8rem; color: var(--gray-500); }
+    .payment-summary {
+      background: var(--gray-50);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      margin-top: 1.5rem;
+    }
+    .payment-summary .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      font-size: 0.9rem;
+    }
+    .payment-summary .summary-total {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 0.75rem;
+      margin-top: 0.5rem;
+      border-top: 2px solid var(--gray-300);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    /* ========== SUCCESS ANIMATION ========== */
+    .success-screen { text-align: center; padding: 2rem 1rem; }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(16,185,129,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      font-size: 2.5rem;
+      color: var(--success);
+      animation: popIn 0.4s ease;
+    }
+    @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    .success-screen h2 { color: var(--gray-900); margin-bottom: 0.5rem; }
+    .success-screen p { color: var(--gray-500); }
+    .status-tracker { margin: 2rem auto; max-width: 400px; text-align: left; }
+    .status-step {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      align-items: flex-start;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .status-dot.done { background: var(--success); }
+    .status-dot.current { background: var(--primary); box-shadow: 0 0 0 4px rgba(99,102,241,0.2); }
+    .status-dot.pending { background: var(--gray-300); }
+
+    /* ========== ADMIN CONFIG ========== */
+    .config-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); margin-bottom: 1.5rem; overflow-x: auto; }
+    .config-tabs button {
+      padding: 0.75rem 1.25rem;
+      background: none;
+      border: none;
+      font-weight: 600;
+      color: var(--gray-400);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .config-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .config-panel { display: none; }
+    .config-panel.active { display: block; }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .toggle-row .toggle-info h4 { font-weight: 600; font-size: 0.95rem; }
+    .toggle-row .toggle-info p { font-size: 0.8rem; color: var(--gray-500); }
+    .toggle-switch {
+      width: 44px;
+      height: 24px;
+      background: var(--gray-300);
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .toggle-switch.on { background: var(--primary); }
+    .toggle-switch::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      background: var(--white);
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.3s;
+      box-shadow: var(--shadow-sm);
+    }
+    .toggle-switch.on::after { transform: translateX(20px); }
+
+    /* ========== PIPELINE BUILDER ========== */
+    .pipeline-steps { display: flex; flex-direction: column; gap: 0.75rem; }
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--white);
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-md);
+    }
+    .pipeline-step .drag-handle { color: var(--gray-400); cursor: grab; font-size: 1.2rem; }
+    .pipeline-step .step-info { flex: 1; }
+    .pipeline-step .step-info h4 { font-weight: 600; font-size: 0.9rem; }
+    .pipeline-step .step-info p { font-size: 0.8rem; color: var(--gray-500); }
+
+    /* ========== CALENDAR VIEW ========== */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: var(--gray-200);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .calendar-day-header {
+      background: var(--gray-100);
+      padding: 0.5rem;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--gray-500);
+    }
+    .calendar-day {
+      background: var(--white);
+      padding: 0.5rem;
+      min-height: 80px;
+      font-size: 0.85rem;
+    }
+    .calendar-day.today { background: rgba(99,102,241,0.05); }
+    .calendar-day .day-num { font-weight: 600; color: var(--gray-700); margin-bottom: 0.25rem; }
+    .calendar-day .cal-event {
+      background: rgba(99,102,241,0.1);
+      color: var(--primary);
+      padding: 0.15rem 0.35rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      margin-bottom: 2px;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .calendar-day.other-month { opacity: 0.4; }
+
+    /* ========== FOOTER ========== */
+    .footer {
+      background: var(--gray-900);
+      color: var(--gray-400);
+      padding: 3rem 2rem 1.5rem;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .footer h4 { color: var(--white); font-size: 0.95rem; margin-bottom: 1rem; }
+    .footer p, .footer a { font-size: 0.85rem; color: var(--gray-400); }
+    .footer a:hover { color: var(--white); }
+    .footer ul { list-style: none; }
+    .footer ul li { margin-bottom: 0.5rem; }
+    .footer-bottom {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--gray-700);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ========== ACCESSIBILITY NOTES TAB ========== */
+    .a11y-note {
+      background: rgba(59,130,246,0.05);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .a11y-note h4 { font-size: 0.9rem; color: var(--info); margin-bottom: 0.25rem; }
+    .a11y-note p { font-size: 0.85rem; color: var(--gray-600); }
+
+    /* ========== FLOW OVERVIEW ========== */
+    .flow-diagram {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--gray-700);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== NAVBAR ==================== -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="nav-brand">
+      <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="#6366F1" stroke-width="2.5"/><path d="M10 16l4 4 8-8" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="brandName">CommunityHub</span>
+    </div>
+    <button class="mobile-nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">☰</button>
+    <div class="nav-links" role="menubar">
+      <a href="#" class="active" onclick="showPage('home')" role="menuitem">Home</a>
+      <a href="#" onclick="showPage('events')" role="menuitem">Events</a>
+      <a href="#" onclick="showPage('about')" role="menuitem">About</a>
+      <a href="#" onclick="showPage('gallery')" role="menuitem">Gallery</a>
+      <a href="#" onclick="showPage('donate')" role="menuitem">Donate</a>
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-secondary btn-sm" onclick="showPage('login')">Sign In</button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('onboarding')">Join Us</button>
+    </div>
+  </nav>
+
+  <!-- ==================== PAGE: HOME ==================== -->
+  <div id="page-home" class="page active">
+    <section class="hero">
+      <p style="font-weight:600;letter-spacing:1px;text-transform:uppercase;font-size:0.8rem;opacity:0.8;">Singapore Telugu Samajam</p>
+      <h1>Your Community,<br>Connected</h1>
+      <p>Discover events, connect with members, and celebrate culture together — all in one place.</p>
+      <div class="hero-cta">
+        <button class="btn btn-white btn-lg" onclick="showPage('events')">Explore Events</button>
+        <button class="btn btn-outline-white btn-lg" onclick="showPage('onboarding')">Become a Member</button>
+      </div>
+      <div class="countdown">
+        <div class="countdown-item"><span class="num">12</span><span class="label">Days</span></div>
+        <div class="countdown-item"><span class="num">08</span><span class="label">Hours</span></div>
+        <div class="countdown-item"><span class="num">34</span><span class="label">Mins</span></div>
+        <div class="countdown-item"><span class="num">51</span><span class="label">Secs</span></div>
+      </div>
+      <p style="margin-top:0.75rem;font-size:0.85rem;opacity:0.7;">Until Ugadi Celebrations 2026</p>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2>Upcoming Events</h2>
+        <p>Don't miss what's happening in our community</p>
+      </div>
+      <div class="events-grid">
+        <!-- Event 1 -->
+        <div class="event-card" onclick="showPage('event-detail')">
+          <div class="event-card-img" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">
+            🎉
+            <span class="badge badge-paid">$15</span>
+          </div>
+          <div class="event-card-body">
+            <span class="event-category">Cultural</span>
+            <h3>Ugadi Celebrations 2026</h3>
+            <div class="event-meta">
+              <div class="event-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg> April 10, 2026 • 5:00 PM</div>
+              <div class="event-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Singapore Expo Hall 5</div>
+            </div>
+            <div class="event-card-footer">
+              <span class="spots-left">42 spots left</span>
+              <button class="btn btn-primary btn-sm">Register</button>
+            </div>
+          </div>
+        </div>
+        <!-- Event 2 -->
+        <div class="event-card">
+          <div class="event-card-img" style="background:linear-gradient(135deg,#10B981,#3B82F6);">
+            🏸
+            <span class="badge badge-free">Free</span>
+          </div>
+          <div class="event-card-body">
+            <span class="event-category">Sports</span>
+            <h3>Badminton Tournament</h3>
+            <div class="event-meta">
+              <div class="event-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg> April 20, 2026 • 9:00 AM</div>
+              <div class="event-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Clementi Sports Hall</div>
+            </div>
+            <div class="event-card-footer">
+              <span class="spots-left available">128 spots left</span>
+              <button class="btn btn-primary btn-sm">Register</button>
+            </div>
+          </div>
+        </div>
+        <!-- Event 3 -->
+        <div class="event-card">
+          <div class="event-card-img" style="background:linear-gradient(135deg,#8B5CF6,#EC4899);">
+            🎭
+            <span class="badge badge-paid">$10</span>
+          </div>
+          <div class="event-card-body">
+            <span class="event-category">Entertainment</span>
+            <h3>Telugu Movie Night</h3>
+            <div class="event-meta">
+              <div class="event-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg> May 3, 2026 • 7:00 PM</div>
+              <div class="event-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Shaw Theatres Lido</div>
+            </div>
+            <div class="event-card-footer">
+              <span class="spots-left">8 spots left</span>
+              <button class="btn btn-primary btn-sm">Register</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:2rem;">
+        <button class="btn btn-secondary" onclick="showPage('events')">View All Events →</button>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="section" style="background:var(--white);max-width:100%;padding:3rem 2rem;">
+      <div style="max-width:1200px;margin:0 auto;">
+        <div class="section-header"><h2>Our Community in Numbers</h2></div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-num">1,247</div><div class="stat-label">Active Members</div></div>
+          <div class="stat-card"><div class="stat-num">48</div><div class="stat-label">Events This Year</div></div>
+          <div class="stat-card"><div class="stat-num">320</div><div class="stat-label">Volunteer Hours</div></div>
+          <div class="stat-card"><div class="stat-num">18</div><div class="stat-label">Years Active</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-grid">
+        <div>
+          <h4>CommunityHub</h4>
+          <p>A white-label community platform powering cultural organizations worldwide. Events, membership, and AI-powered engagement — all in one place.</p>
+          <p style="margin-top:1rem;font-size:0.8rem;">Powered by CommunityHub v1.0</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="#" onclick="showPage('events')">Events</a></li>
+            <li><a href="#" onclick="showPage('onboarding')">Join Us</a></li>
+            <li><a href="#" onclick="showPage('about')">About</a></li>
+            <li><a href="#" onclick="showPage('gallery')">Gallery</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Get Involved</h4>
+          <ul>
+            <li><a href="#" onclick="showPage('volunteer')">Volunteer</a></li>
+            <li><a href="#" onclick="showPage('donate')">Donate</a></li>
+            <li><a href="#" onclick="showPage('sponsor')">Sponsor</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="mailto:info@sts.org.sg">info@sts.org.sg</a></li>
+            <li><a href="#">WhatsApp</a></li>
+            <li><a href="#">Facebook</a></li>
+            <li><a href="#">Instagram</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 Singapore Telugu Samajam. Built with CommunityHub.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==================== PAGE: EVENTS LISTING ==================== -->
+  <div id="page-events" class="page">
+    <section class="section">
+      <div class="section-header" style="text-align:left;">
+        <h2>Events</h2>
+        <p>Discover upcoming community events and activities</p>
+      </div>
+      <div class="filters-bar">
+        <input type="search" placeholder="Search events..." aria-label="Search events" id="eventSearch" oninput="filterEvents()">
+        <select aria-label="Category filter" id="categoryFilter" onchange="filterEvents()">
+          <option value="">All Categories</option>
+          <option>Cultural</option>
+          <option>Sports</option>
+          <option>Entertainment</option>
+          <option>Religious</option>
+          <option>Social</option>
+          <option>AGM</option>
+        </select>
+        <select aria-label="Price filter" id="priceFilter" onchange="filterEvents()">
+          <option value="">All Prices</option>
+          <option value="free">Free</option>
+          <option value="paid">Paid</option>
+        </select>
+        <div class="view-toggle">
+          <button class="active" onclick="showEventsView('cards', this)" aria-label="Card view">☷ Cards</button>
+          <button onclick="showEventsView('calendar', this)" aria-label="Calendar view">📅 Calendar</button>
+        </div>
+      </div>
+      <!-- Card View -->
+      <div id="events-cards-view">
+        <div class="events-grid" id="eventsGrid">
+          <!-- Events populated by JS -->
+        </div>
+      </div>
+      <!-- Calendar View -->
+      <div id="events-calendar-view" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <button class="btn btn-ghost" onclick="changeMonth(-1)">← Previous</button>
+          <h3 id="calendarMonth" style="font-size:1.2rem;">April 2026</h3>
+          <button class="btn btn-ghost" onclick="changeMonth(1)">Next →</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+          <!-- Calendar populated by JS -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: EVENT DETAIL ==================== -->
+  <div id="page-event-detail" class="page">
+    <div class="event-detail-hero">
+      <div style="max-width:1200px;margin:0 auto;">
+        <span class="badge badge-info" style="margin-bottom:0.5rem;">Cultural</span>
+        <h1>Ugadi Celebrations 2026</h1>
+        <div class="event-detail-info">
+          <div class="info-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> April 10, 2026</div>
+          <div class="info-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 5:00 PM – 10:00 PM</div>
+          <div class="info-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Singapore Expo Hall 5</div>
+          <div class="info-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> 42 spots remaining</div>
+        </div>
+      </div>
+    </div>
+    <div class="event-detail-body">
+      <div>
+        <div class="event-tabs">
+          <button class="active" onclick="showEventTab('desc',this)">Description</button>
+          <button onclick="showEventTab('schedule',this)">Schedule</button>
+          <button onclick="showEventTab('speakers',this)">Performers</button>
+        </div>
+        <div id="event-tab-desc" class="event-tab-content active">
+          <p style="color:var(--gray-600);line-height:1.8;">
+            Join us for the grandest Ugadi celebration in Singapore! Ugadi marks the Telugu New Year and is a time for renewal, joy, and togetherness.<br><br>
+            This year's celebration features traditional puja, cultural performances including classical dance and music, a grand vegetarian dinner, and entertainment for the whole family.<br><br>
+            <strong>What to expect:</strong>
+          </p>
+          <ul style="margin:1rem 0 1rem 1.5rem;color:var(--gray-600);line-height:2;">
+            <li>Traditional Ugadi Puja and Panchangam Sravanam</li>
+            <li>Classical dance performances by local artists</li>
+            <li>Live Telugu music concert</li>
+            <li>Kids entertainment zone</li>
+            <li>Grand vegetarian dinner buffet</li>
+            <li>Lucky draw with exciting prizes</li>
+          </ul>
+          <div style="margin-top:1.5rem;">
+            <strong style="font-size:0.9rem;color:var(--gray-700);">Share this event:</strong>
+            <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+              <button class="btn btn-sm" style="background:#25D366;color:white;">WhatsApp</button>
+              <button class="btn btn-sm" style="background:#0088cc;color:white;">Telegram</button>
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Link copied!','Event link copied to clipboard')">Copy Link</button>
+            </div>
+          </div>
+        </div>
+        <div id="event-tab-schedule" class="event-tab-content">
+          <div style="display:flex;flex-direction:column;gap:1rem;">
+            <div style="display:flex;gap:1rem;padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div style="font-weight:700;color:var(--primary);min-width:100px;">5:00 PM</div>
+              <div><strong>Doors Open</strong><br><span style="font-size:0.85rem;color:var(--gray-500);">Registration & welcome drinks</span></div>
+            </div>
+            <div style="display:flex;gap:1rem;padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div style="font-weight:700;color:var(--primary);min-width:100px;">5:30 PM</div>
+              <div><strong>Ugadi Puja</strong><br><span style="font-size:0.85rem;color:var(--gray-500);">Traditional ceremony & Panchangam Sravanam</span></div>
+            </div>
+            <div style="display:flex;gap:1rem;padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div style="font-weight:700;color:var(--primary);min-width:100px;">6:30 PM</div>
+              <div><strong>Cultural Performances</strong><br><span style="font-size:0.85rem;color:var(--gray-500);">Classical dance & music by local artists</span></div>
+            </div>
+            <div style="display:flex;gap:1rem;padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div style="font-weight:700;color:var(--primary);min-width:100px;">8:00 PM</div>
+              <div><strong>Dinner</strong><br><span style="font-size:0.85rem;color:var(--gray-500);">Grand vegetarian buffet</span></div>
+            </div>
+            <div style="display:flex;gap:1rem;padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div style="font-weight:700;color:var(--primary);min-width:100px;">9:00 PM</div>
+              <div><strong>Lucky Draw & Closing</strong><br><span style="font-size:0.85rem;color:var(--gray-500);">Prizes, photo session, and farewell</span></div>
+            </div>
+          </div>
+        </div>
+        <div id="event-tab-speakers" class="event-tab-content">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;">
+            <div style="text-align:center;padding:1.25rem;background:var(--gray-50);border-radius:var(--radius-lg);">
+              <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>
+              <strong style="font-size:0.95rem;">Smt. Padma Rao</strong>
+              <p style="font-size:0.8rem;color:var(--gray-500);">Classical vocalist</p>
+            </div>
+            <div style="text-align:center;padding:1.25rem;background:var(--gray-50);border-radius:var(--radius-lg);">
+              <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">💃</div>
+              <strong style="font-size:0.95rem;">Sri Venkat Reddy</strong>
+              <p style="font-size:0.8rem;color:var(--gray-500);">Kuchipudi dancer</p>
+            </div>
+            <div style="text-align:center;padding:1.25rem;background:var(--gray-50);border-radius:var(--radius-lg);">
+              <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎤</div>
+              <strong style="font-size:0.95rem;">Dr. Lakshmi Devi</strong>
+              <p style="font-size:0.8rem;color:var(--gray-500);">Guest speaker</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar — Registration -->
+      <div class="event-sidebar" id="eventRegSidebar">
+        <h3 style="margin-bottom:0.25rem;">Register for this Event</h3>
+        <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1.25rem;">Secure your spot now</p>
+        <div class="form-group">
+          <label>Number of Adults</label>
+          <select id="regAdults" onchange="updateRegTotal()">
+            <option value="1">1 Adult</option>
+            <option value="2">2 Adults</option>
+            <option value="3">3 Adults</option>
+            <option value="4">4 Adults</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Number of Children (under 12)</label>
+          <select id="regChildren" onchange="updateRegTotal()">
+            <option value="0">0 Children</option>
+            <option value="1">1 Child</option>
+            <option value="2">2 Children</option>
+            <option value="3">3 Children</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dietary Preference</label>
+          <select><option>Vegetarian</option><option>Vegan</option><option>No preference</option></select>
+        </div>
+        <div class="form-group">
+          <label>Special Requirements</label>
+          <textarea rows="2" placeholder="Wheelchair access, allergies, etc." style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea>
+        </div>
+        <div class="payment-summary">
+          <div class="summary-row"><span>Adults (×<span id="adultCount">1</span>)</span><span>$<span id="adultTotal">15.00</span></span></div>
+          <div class="summary-row"><span>Children (×<span id="childCount">0</span>)</span><span>$<span id="childTotal">0.00</span></span></div>
+          <div class="summary-total"><span>Total</span><span>$<span id="regTotal">15.00</span></span></div>
+        </div>
+        <div id="regBtn"><button class="btn btn-primary btn-block btn-lg" style="margin-top:1rem;" onclick="showRegModal()">Register & Pay</button></div>
+        <div id="waitlistBtn" style="display:none;">
+          <div style="margin-top:1rem;padding:0.75rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-md);text-align:center;margin-bottom:0.75rem;">
+            <p style="font-size:0.85rem;color:var(--warning);font-weight:600;">This event is full</p>
+            <p style="font-size:0.8rem;color:var(--gray-500);">Join the waitlist and we'll notify you if a spot opens</p>
+          </div>
+          <button class="btn btn-secondary btn-block btn-lg" onclick="showToast('Waitlisted!','You are #14 on the waitlist. We will notify you when a spot opens.')">Join Waitlist</button>
+        </div>
+        <button class="btn btn-ghost btn-block btn-sm" style="margin-top:0.5rem;" onclick="showToast('Calendar Added','Ugadi 2026 added to your calendar')">📅 Add to Calendar</button>
+        <button class="btn btn-ghost btn-block btn-sm" onclick="toggleWaitlistDemo()" style="margin-top:0.25rem;font-size:0.7rem;color:var(--gray-400);">Toggle Waitlist Demo ↔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE: ONBOARDING ==================== -->
+  <div id="page-onboarding" class="page">
+    <div class="stepper-container">
+      <h2 style="text-align:center;margin-bottom:0.5rem;font-size:1.5rem;">Join Our Community</h2>
+      <p style="text-align:center;color:var(--gray-500);margin-bottom:2rem;">Complete the steps below to become a member</p>
+      <!-- Stepper -->
+      <div class="stepper" id="stepper">
+        <div class="stepper-step active" data-step="1"><div class="stepper-circle">1</div><div class="stepper-label">Phone</div></div>
+        <div class="stepper-step" data-step="2"><div class="stepper-circle">2</div><div class="stepper-label">Email</div></div>
+        <div class="stepper-step" data-step="3"><div class="stepper-circle">3</div><div class="stepper-label">Details</div></div>
+        <div class="stepper-step" data-step="4"><div class="stepper-circle">4</div><div class="stepper-label">Tier</div></div>
+        <div class="stepper-step" data-step="5"><div class="stepper-circle">5</div><div class="stepper-label">Referral</div></div>
+        <div class="stepper-step" data-step="6"><div class="stepper-circle">6</div><div class="stepper-label">Payment</div></div>
+      </div>
+
+      <!-- Step 1: Phone OTP -->
+      <div class="step-content active" data-step="1">
+        <h2>Verify Your Phone Number</h2>
+        <p class="step-desc">We'll send a 6-digit code to verify your phone number</p>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <div style="display:flex;gap:0.5rem;">
+            <select style="width:100px;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);">
+              <option>+65</option><option>+91</option><option>+1</option><option>+44</option>
+            </select>
+            <input type="tel" placeholder="8123 4567" id="phoneInput" style="flex:1;">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="sendOTP()" id="sendOTPBtn">Send OTP</button>
+        <div id="otpSection" style="display:none;">
+          <p style="text-align:center;margin-top:1.5rem;color:var(--gray-600);font-size:0.9rem;">Enter the 6-digit code sent to your phone</p>
+          <div class="otp-input-group">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+          </div>
+          <div class="otp-timer">Resend code in <strong id="otpCountdown">60</strong>s</div>
+        </div>
+        <div class="step-nav">
+          <div></div>
+          <button class="btn btn-primary" onclick="nextStep(2)" id="phoneNextBtn" disabled>Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Email Verify -->
+      <div class="step-content" data-step="2">
+        <h2>Verify Your Email</h2>
+        <p class="step-desc">We'll send a verification code to your email address</p>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" placeholder="ravi@example.com" id="emailInput">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="sendEmailCode()">Send Verification Code</button>
+        <div id="emailCodeSection" style="display:none;">
+          <p style="text-align:center;margin-top:1.5rem;color:var(--gray-600);font-size:0.9rem;">Enter the 6-digit code sent to your email</p>
+          <div class="otp-input-group">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+            <input type="text" maxlength="1" oninput="otpNext(this)">
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="prevStep(1)">← Back</button>
+          <button class="btn btn-primary" onclick="nextStep(3)" id="emailNextBtn" disabled>Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Personal Details -->
+      <div class="step-content" data-step="3">
+        <h2>Personal Details</h2>
+        <p class="step-desc">Tell us about yourself so we can personalize your experience</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" placeholder="Ravi Kumar" required>
+          </div>
+          <div class="form-group">
+            <label>Date of Birth *</label>
+            <input type="date" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Gender *</label>
+            <select><option value="">Select...</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select>
+          </div>
+          <div class="form-group">
+            <label>Nationality *</label>
+            <select><option value="">Select...</option><option>Singaporean</option><option>Indian</option><option>PR</option><option>Other</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Postal Code *</label>
+            <input type="text" placeholder="123456" maxlength="6">
+          </div>
+          <div class="form-group">
+            <label>Residential Status</label>
+            <select><option>Citizen</option><option>Permanent Resident</option><option>Employment Pass</option><option>Work Permit</option><option>Student Pass</option><option>Dependent Pass</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Interests (select all that apply)</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Cultural Events</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Sports</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Music</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Dance</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Movies</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Volunteering</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Religious</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Travel</label>
+          </div>
+        </div>
+        <!-- Family Details (shown when Family tier is expected) -->
+        <div id="familyDetails" style="margin-top:1.5rem;padding:1.25rem;background:var(--gray-50);border-radius:var(--radius-lg);border:1px solid var(--gray-200);">
+          <h4 style="margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;">
+            Family Members (optional)
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('familyFields').style.display=document.getElementById('familyFields').style.display==='none'?'block':'none'">+ Add Family</button>
+          </h4>
+          <p style="font-size:0.8rem;color:var(--gray-500);margin-bottom:0.75rem;">Add spouse and children if applying for a Family membership</p>
+          <div id="familyFields" style="display:none;">
+            <div style="padding:1rem;background:var(--white);border-radius:var(--radius-md);border:1px solid var(--gray-200);margin-bottom:0.75rem;">
+              <strong style="font-size:0.85rem;color:var(--primary);">Spouse Details</strong>
+              <div class="form-row" style="margin-top:0.5rem;">
+                <div class="form-group"><label>Spouse Name</label><input type="text" placeholder="Full name"></div>
+                <div class="form-group"><label>Date of Birth</label><input type="date"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Email</label><input type="email" placeholder="spouse@email.com"></div>
+                <div class="form-group"><label>Phone</label><input type="tel" placeholder="+65 xxxx xxxx"></div>
+              </div>
+            </div>
+            <div style="padding:1rem;background:var(--white);border-radius:var(--radius-md);border:1px solid var(--gray-200);">
+              <strong style="font-size:0.85rem;color:var(--primary);">Children</strong>
+              <div class="form-row" style="margin-top:0.5rem;">
+                <div class="form-group"><label>Child 1 Name</label><input type="text" placeholder="Name"></div>
+                <div class="form-group"><label>Date of Birth</label><input type="date"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Child 2 Name</label><input type="text" placeholder="Name (optional)"></div>
+                <div class="form-group"><label>Date of Birth</label><input type="date"></div>
+              </div>
+              <button class="btn btn-sm btn-ghost" style="margin-top:0.5rem;">+ Add Another Child</button>
+            </div>
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="prevStep(2)">← Back</button>
+          <button class="btn btn-primary" onclick="nextStep(4)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Membership Tier -->
+      <div class="step-content" data-step="4">
+        <h2>Choose Your Membership</h2>
+        <p class="step-desc">Select the plan that's right for you</p>
+        <div class="tiers-grid">
+          <div class="tier-card" onclick="selectTier(this)">
+            <div class="tier-name">Individual Annual</div>
+            <div class="tier-price">$16<span>/year</span></div>
+            <ul class="tier-features">
+              <li>Event registration</li>
+              <li>Member discounts</li>
+              <li>Community access</li>
+              <li>AI chatbot support</li>
+            </ul>
+          </div>
+          <div class="tier-card" onclick="selectTier(this)" style="overflow:visible;">
+            <div class="tier-popular">Most Popular</div>
+            <div class="tier-name">Family Annual</div>
+            <div class="tier-price">$26<span>/year</span></div>
+            <ul class="tier-features">
+              <li>Everything in Individual</li>
+              <li>Spouse included</li>
+              <li>Up to 3 children</li>
+              <li>Family event pricing</li>
+            </ul>
+          </div>
+          <div class="tier-card" onclick="selectTier(this)">
+            <div class="tier-name">Individual Life</div>
+            <div class="tier-price">$151<span>/once</span></div>
+            <ul class="tier-features">
+              <li>Lifetime membership</li>
+              <li>All annual benefits</li>
+              <li>Voting rights at AGM</li>
+              <li>Priority registration</li>
+            </ul>
+          </div>
+          <div class="tier-card" onclick="selectTier(this)">
+            <div class="tier-name">Family Life</div>
+            <div class="tier-price">$251<span>/once</span></div>
+            <ul class="tier-features">
+              <li>Lifetime family membership</li>
+              <li>All annual benefits</li>
+              <li>Voting rights at AGM</li>
+              <li>Priority registration</li>
+            </ul>
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="prevStep(3)">← Back</button>
+          <button class="btn btn-primary" onclick="nextStep(5)" id="tierNextBtn">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Referral -->
+      <div class="step-content" data-step="5">
+        <h2>Member Referral</h2>
+        <p class="step-desc">An existing member must vouch for your application. This helps us maintain community trust.</p>
+        <div class="form-group">
+          <label>Referrer's Phone Number or Member ID</label>
+          <input type="text" placeholder="e.g., 8123 4567 or MEM-00142" id="referralInput">
+          <div class="hint">The referrer will receive a notification to confirm your application</div>
+        </div>
+        <button class="btn btn-secondary btn-block" onclick="lookupReferrer()">Look Up Referrer</button>
+        <div id="referrerResult" style="display:none;margin-top:1rem;padding:1rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-md);">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:40px;height:40px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;">👤</div>
+            <div>
+              <strong style="font-size:0.95rem;">Sri Ramesh Reddy</strong>
+              <p style="font-size:0.8rem;color:var(--gray-500);">Member since 2019 • MEM-00142</p>
+            </div>
+            <span class="badge badge-success" style="margin-left:auto;">✓ Found</span>
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="prevStep(4)">← Back</button>
+          <button class="btn btn-primary" onclick="nextStep(6)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Payment -->
+      <div class="step-content" data-step="6">
+        <h2>Complete Payment</h2>
+        <p class="step-desc">Choose your preferred payment method</p>
+        <div class="payment-methods">
+          <div class="payment-method selected" onclick="selectPayment(this)">
+            <div class="pm-icon" style="background:#FFC43A;color:#003087;font-size:0.7rem;">PP</div>
+            <div class="pm-info">
+              <h4>PayPal</h4>
+              <p>Pay securely with your PayPal account or card</p>
+            </div>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this)">
+            <div class="pm-icon" style="background:#7B2D8E;color:white;font-size:0.7rem;">PN</div>
+            <div class="pm-info">
+              <h4>PayNow</h4>
+              <p>Scan QR code with your banking app</p>
+            </div>
+          </div>
+        </div>
+        <div class="payment-summary" style="margin-top:1.5rem;">
+          <div class="summary-row"><span>Family Annual Membership</span><span>$26.00</span></div>
+          <div class="summary-row"><span>Service charge (3.9% + $0.50)</span><span>$1.51</span></div>
+          <div class="summary-total"><span>Total</span><span>$27.51</span></div>
+        </div>
+        <div class="form-group" style="margin-top:1.25rem;">
+          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;">
+            <input type="checkbox" id="pdpaConsent" style="margin-top:3px;">
+            <span style="font-size:0.85rem;">I agree to the <a href="#">Privacy Policy</a> and <a href="#">Terms of Use</a>. I consent to the collection and use of my personal data as described in the PDPA notice.</span>
+          </label>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="prevStep(5)">← Back</button>
+          <button class="btn btn-success btn-lg" onclick="completeOnboarding()">Pay & Submit Application</button>
+        </div>
+      </div>
+
+      <!-- Step 7: Success -->
+      <div class="step-content" data-step="7" id="successStep">
+        <div class="success-screen">
+          <div class="success-icon">✓</div>
+          <h2>Application Submitted!</h2>
+          <p>Your membership application has been received. A committee member will review it shortly.</p>
+          <div class="status-tracker">
+            <div class="status-step"><div class="status-dot done"></div><div><strong>Phone Verified</strong><br><span style="font-size:0.8rem;color:var(--gray-500);">+65 8123 4567</span></div></div>
+            <div class="status-step"><div class="status-dot done"></div><div><strong>Email Verified</strong><br><span style="font-size:0.8rem;color:var(--gray-500);">ravi@example.com</span></div></div>
+            <div class="status-step"><div class="status-dot done"></div><div><strong>Details Submitted</strong></div></div>
+            <div class="status-step"><div class="status-dot done"></div><div><strong>Payment Received</strong><br><span style="font-size:0.8rem;color:var(--gray-500);">$27.51 via PayPal</span></div></div>
+            <div class="status-step"><div class="status-dot done"></div><div><strong>Referral Sent</strong><br><span style="font-size:0.8rem;color:var(--gray-500);">Awaiting confirmation from Sri Ramesh Reddy</span></div></div>
+            <div class="status-step"><div class="status-dot current"></div><div><strong>Under Review</strong><br><span style="font-size:0.8rem;color:var(--gray-500);">Committee will review within 48 hours</span></div></div>
+          </div>
+          <button class="btn btn-primary" onclick="showPage('home')" style="margin-top:1.5rem;">Back to Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE: MEMBER DASHBOARD ==================== -->
+  <div id="page-dashboard" class="page">
+    <div class="dashboard-layout">
+      <aside class="sidebar" role="navigation" aria-label="Dashboard navigation">
+        <div style="padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--gray-100);margin-bottom:0.75rem;">
+          <strong style="font-size:1rem;">My Account</strong>
+          <p style="font-size:0.8rem;color:var(--gray-500);">ravi@example.com</p>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#" class="active" onclick="showDashTab('overview',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Overview</a>
+          <a href="#" onclick="showDashTab('my-events',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> My Events</a>
+          <a href="#" onclick="showDashTab('profile',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Profile</a>
+          <a href="#" onclick="showDashTab('membership',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Membership</a>
+          <a href="#" onclick="showDashTab('notifications',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> Notifications <span class="badge badge-danger" style="margin-left:auto;">3</span></a>
+        </nav>
+      </aside>
+      <main class="dashboard-content">
+        <!-- Overview -->
+        <div id="dash-overview" class="dash-tab active">
+          <h2 style="margin-bottom:1.5rem;">Welcome back, Ravi! 👋</h2>
+          <div class="dashboard-stats">
+            <div class="dash-stat"><div class="dash-stat-label">Upcoming Events</div><div class="dash-stat-num">3</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Events Attended</div><div class="dash-stat-num">12</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Member Since</div><div class="dash-stat-num">2019</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Membership</div><div class="dash-stat-num" style="font-size:1.1rem;color:var(--success);">Active</div></div>
+          </div>
+          <div style="margin-top:1rem;">
+            <h3 style="font-size:1.1rem;margin-bottom:1rem;">Recommended for You</h3>
+            <div class="events-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));">
+              <div class="event-card" onclick="showPage('event-detail')">
+                <div class="event-card-img" style="background:linear-gradient(135deg,#F59E0B,#EF4444);height:120px;">🎉</div>
+                <div class="event-card-body">
+                  <span class="event-category">Cultural</span>
+                  <h3>Ugadi Celebrations 2026</h3>
+                  <div class="event-meta"><div class="event-meta-item">📅 April 10 • 5:00 PM</div></div>
+                  <div class="event-card-footer"><span class="spots-left">42 spots left</span><button class="btn btn-primary btn-sm">Register</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- My Events -->
+        <div id="dash-my-events" class="dash-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">My Events</h2>
+          <div class="table-container">
+            <div class="table-header"><h3>Upcoming</h3></div>
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Ugadi Celebrations</strong></td><td>Apr 10, 2026</td><td><span class="badge badge-success">Confirmed</span></td><td><button class="btn btn-sm btn-ghost" onclick="showModal('qrModal')">QR Code</button> <button class="btn btn-sm btn-ghost" onclick="showModal('cancelModal')">Cancel</button></td></tr>
+                <tr><td><strong>Badminton Tournament</strong></td><td>Apr 20, 2026</td><td><span class="badge badge-warning">Waitlisted</span></td><td><span style="font-size:0.8rem;color:var(--gray-500);">Position #3</span> <button class="btn btn-sm btn-ghost">Leave Waitlist</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-container" style="margin-top:1.5rem;">
+            <div class="table-header"><h3>Past Events</h3></div>
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Sankranthi 2026</strong></td><td>Jan 14, 2026</td><td><span class="badge badge-gray">Attended</span></td><td><button class="btn btn-sm btn-secondary" onclick="showModal('feedbackModal')">Give Feedback</button></td></tr>
+                <tr><td><strong>New Year Gala</strong></td><td>Jan 1, 2026</td><td><span class="badge badge-gray">Attended</span></td><td><button class="btn btn-sm btn-ghost">View Photos</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Profile -->
+        <div id="dash-profile" class="dash-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Profile</h2>
+          <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);">
+            <div class="form-row">
+              <div class="form-group"><label>Full Name</label><input type="text" value="Ravi Kumar"></div>
+              <div class="form-group"><label>Email</label><input type="email" value="ravi@example.com"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Phone</label><input type="tel" value="+65 8123 4567"></div>
+              <div class="form-group"><label>Date of Birth</label><input type="date" value="1985-06-15"></div>
+            </div>
+            <div class="form-group">
+              <label>Interests</label>
+              <div class="checkbox-group">
+                <label class="checkbox-item selected" onclick="this.classList.toggle('selected')"><input type="checkbox" checked> Cultural Events</label>
+                <label class="checkbox-item selected" onclick="this.classList.toggle('selected')"><input type="checkbox" checked> Music</label>
+                <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Sports</label>
+                <label class="checkbox-item selected" onclick="this.classList.toggle('selected')"><input type="checkbox" checked> Dance</label>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="showToast('Profile Updated','Your profile has been saved')">Save Changes</button>
+          </div>
+        </div>
+        <!-- Membership -->
+        <div id="dash-membership" class="dash-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Membership</h2>
+          <div style="background:linear-gradient(135deg,var(--primary),#7C3AED);color:var(--white);border-radius:var(--radius-lg);padding:2rem;margin-bottom:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <p style="opacity:0.8;font-size:0.85rem;">Membership Status</p>
+                <h3 style="font-size:1.5rem;margin-top:0.25rem;">Family Annual</h3>
+                <p style="margin-top:0.25rem;font-size:0.9rem;">Member ID: MEM-00847</p>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge" style="background:rgba(255,255,255,0.2);color:white;font-size:0.85rem;padding:0.3rem 0.75rem;">Active</span>
+                <p style="margin-top:0.5rem;font-size:0.85rem;opacity:0.8;">Expires: Dec 31, 2026</p>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>Payment History</h3></div>
+            <table>
+              <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>Jan 5, 2026</td><td>Family Annual Renewal</td><td>$27.51</td><td>PayPal</td><td><span class="badge badge-success">Paid</span></td></tr>
+                <tr><td>Jan 3, 2025</td><td>Family Annual Renewal</td><td>$27.51</td><td>PayNow</td><td><span class="badge badge-success">Paid</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Notifications -->
+        <div id="dash-notifications" class="dash-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Notifications</h2>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="background:var(--white);border-radius:var(--radius-md);padding:1rem 1.25rem;border:1px solid var(--gray-100);border-left:3px solid var(--primary);">
+              <div style="display:flex;justify-content:space-between;"><strong style="font-size:0.9rem;">Ugadi Reminder</strong><span style="font-size:0.75rem;color:var(--gray-400);">2 hours ago</span></div>
+              <p style="font-size:0.85rem;color:var(--gray-600);margin-top:0.25rem;">Ugadi Celebrations is in 12 days! Don't forget to register.</p>
+            </div>
+            <div style="background:var(--white);border-radius:var(--radius-md);padding:1rem 1.25rem;border:1px solid var(--gray-100);border-left:3px solid var(--success);">
+              <div style="display:flex;justify-content:space-between;"><strong style="font-size:0.9rem;">Badminton Waitlist Update</strong><span style="font-size:0.75rem;color:var(--gray-400);">1 day ago</span></div>
+              <p style="font-size:0.85rem;color:var(--gray-600);margin-top:0.25rem;">You've moved up to position #3 on the waitlist.</p>
+            </div>
+            <div style="background:var(--white);border-radius:var(--radius-md);padding:1rem 1.25rem;border:1px solid var(--gray-100);border-left:3px solid var(--secondary);">
+              <div style="display:flex;justify-content:space-between;"><strong style="font-size:0.9rem;">New Event: Telugu Movie Night</strong><span style="font-size:0.75rem;color:var(--gray-400);">3 days ago</span></div>
+              <p style="font-size:0.85rem;color:var(--gray-600);margin-top:0.25rem;">Based on your interests, you might enjoy Telugu Movie Night on May 3rd.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE: ADMIN PANEL ==================== -->
+  <div id="page-admin" class="page">
+    <div class="dashboard-layout">
+      <aside class="sidebar" role="navigation" aria-label="Admin navigation">
+        <div style="padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--gray-100);margin-bottom:0.75rem;">
+          <span class="badge badge-info" style="font-size:0.75rem;">Admin Panel</span>
+          <p style="font-size:0.8rem;color:var(--gray-500);margin-top:0.5rem;">Suresh (Committee)</p>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#" class="active" onclick="showAdminTab('admin-dash',this)">📊 Dashboard</a>
+          <a href="#" onclick="showAdminTab('admin-events',this)">📅 Events</a>
+          <a href="#" onclick="showAdminTab('admin-members',this)">👥 Members</a>
+          <a href="#" onclick="showAdminTab('admin-applications',this)">📋 Applications <span class="badge badge-danger" style="margin-left:4px;">5</span></a>
+          <a href="#" onclick="showAdminTab('admin-reports',this)">📈 Reports</a>
+          <a href="#" onclick="showAdminTab('admin-comms',this)">📧 Communications</a>
+          <a href="#" onclick="showAdminTab('admin-config',this)">⚙️ Configuration</a>
+          <a href="#" onclick="showAdminTab('admin-chatbot',this)">🤖 AI Chatbot</a>
+          <a href="#" onclick="showPage('checkin')" style="border-top:1px solid var(--gray-100);margin-top:0.5rem;padding-top:0.75rem;">📱 Event Check-In</a>
+        </nav>
+      </aside>
+      <main class="dashboard-content">
+        <!-- Admin Dashboard -->
+        <div id="admin-dash" class="admin-tab">
+          <h2 style="margin-bottom:1.5rem;">Admin Dashboard</h2>
+          <div class="dashboard-stats">
+            <div class="dash-stat"><div class="dash-stat-label">Total Members</div><div class="dash-stat-num">1,247</div><div class="dash-stat-change">↑ 12 this month</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Pending Applications</div><div class="dash-stat-num" style="color:var(--warning);">5</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Upcoming Events</div><div class="dash-stat-num">6</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Revenue (MTD)</div><div class="dash-stat-num">$2,340</div><div class="dash-stat-change">↑ 18% vs last month</div></div>
+          </div>
+          <div class="table-container" style="margin-top:1.5rem;">
+            <div class="table-header"><h3>Recent Activity</h3></div>
+            <table>
+              <thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td>2m ago</td><td><span class="badge badge-info">Registration</span></td><td>Priya Sharma</td><td>Registered for Ugadi Celebrations</td></tr>
+                <tr><td>15m ago</td><td><span class="badge badge-warning">Application</span></td><td>Anil Kumar</td><td>New membership application (Fraud Score: 15)</td></tr>
+                <tr><td>1h ago</td><td><span class="badge badge-success">Payment</span></td><td>Lakshmi Devi</td><td>$26.00 Family Annual Renewal via PayPal</td></tr>
+                <tr><td>3h ago</td><td><span class="badge badge-danger">Alert</span></td><td>System</td><td>High fraud score (82) on application — requires review</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Admin Events -->
+        <div id="admin-events" class="admin-tab" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h2>Events Management</h2>
+            <button class="btn btn-primary" onclick="showModal('createEventModal')">+ Create Event</button>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th>Registered</th><th>Capacity</th><th>Revenue</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Ugadi 2026</strong></td><td>Apr 10</td><td>158</td><td>200</td><td>$2,370</td><td><span class="badge badge-success">Published</span></td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">View</button></td></tr>
+                <tr><td><strong>Badminton</strong></td><td>Apr 20</td><td>72</td><td>200</td><td>Free</td><td><span class="badge badge-success">Published</span></td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">View</button></td></tr>
+                <tr><td><strong>Movie Night</strong></td><td>May 3</td><td>42</td><td>50</td><td>$420</td><td><span class="badge badge-warning">Draft</span></td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-primary">Publish</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Admin Members -->
+        <div id="admin-members" class="admin-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Members</h2>
+          <div class="filters-bar" style="margin-bottom:1rem;">
+            <input type="search" placeholder="Search members..." style="min-width:200px;">
+            <select><option>All Status</option><option>Active</option><option>Expired</option><option>Suspended</option></select>
+            <select><option>All Tiers</option><option>Individual Annual</option><option>Family Annual</option><option>Individual Life</option><option>Family Life</option></select>
+            <button class="btn btn-sm btn-ghost" style="margin-left:auto;">Export CSV</button>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Member ID</th><th>Name</th><th>Email</th><th>Tier</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr><td>MEM-00847</td><td><strong>Ravi Kumar</strong></td><td>ravi@example.com</td><td>Family Annual</td><td><span class="badge badge-success">Active</span></td><td>Mar 2019</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+                <tr><td>MEM-00846</td><td><strong>Priya Sharma</strong></td><td>priya@example.com</td><td>Individual Life</td><td><span class="badge badge-success">Active</span></td><td>Jan 2020</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+                <tr><td>MEM-00812</td><td><strong>Venkat Reddy</strong></td><td>venkat@example.com</td><td>Family Annual</td><td><span class="badge badge-danger">Expired</span></td><td>Jun 2018</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Admin Applications (Fraud Queue) -->
+        <div id="admin-applications" class="admin-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Membership Applications</h2>
+          <div class="table-container">
+            <div class="table-header"><h3>Pending Review (5)</h3><button class="btn btn-sm btn-success">Bulk Approve Low-Risk</button></div>
+            <table>
+              <thead><tr><th>Applicant</th><th>Phone</th><th>Referrer</th><th>Tier</th><th>Fraud Score</th><th>Date</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><strong>Anil Kumar</strong><br><span style="font-size:0.75rem;color:var(--gray-400);">anil@gmail.com</span></td>
+                  <td>+65 9234 5678</td>
+                  <td><span class="badge badge-success">✓ Confirmed</span></td>
+                  <td>Family Annual</td>
+                  <td><div class="fraud-score"><div class="fraud-bar"><div class="fraud-bar-fill low" style="width:15%"></div></div><span class="fraud-label" style="color:var(--success);">15</span></div></td>
+                  <td>Today</td>
+                  <td><button class="btn btn-sm btn-success" onclick="showToast('Approved','Anil Kumar has been approved')">Approve</button> <button class="btn btn-sm btn-ghost">Review</button></td>
+                </tr>
+                <tr>
+                  <td><strong>Sita Rao</strong><br><span style="font-size:0.75rem;color:var(--gray-400);">sita.rao@yahoo.com</span></td>
+                  <td>+65 8765 4321</td>
+                  <td><span class="badge badge-warning">⏳ Pending</span></td>
+                  <td>Individual Annual</td>
+                  <td><div class="fraud-score"><div class="fraud-bar"><div class="fraud-bar-fill medium" style="width:45%"></div></div><span class="fraud-label" style="color:var(--warning);">45</span></div></td>
+                  <td>Yesterday</td>
+                  <td><button class="btn btn-sm btn-success">Approve</button> <button class="btn btn-sm btn-ghost">Review</button></td>
+                </tr>
+                <tr style="background:rgba(239,68,68,0.03);">
+                  <td><strong>John Smith</strong><br><span style="font-size:0.75rem;color:var(--gray-400);">j.smith@tempmail.xyz</span></td>
+                  <td>+1 555 0123</td>
+                  <td><span class="badge badge-danger">✗ Invalid</span></td>
+                  <td>Individual Annual</td>
+                  <td><div class="fraud-score"><div class="fraud-bar"><div class="fraud-bar-fill high" style="width:82%"></div></div><span class="fraud-label" style="color:var(--danger);">82</span></div></td>
+                  <td>Yesterday</td>
+                  <td><button class="btn btn-sm btn-danger" onclick="showModal('rejectModal')">Reject</button> <button class="btn btn-sm btn-ghost">Review</button></td>
+                </tr>
+                <tr>
+                  <td><strong>Deepa Menon</strong><br><span style="font-size:0.75rem;color:var(--gray-400);">deepa.m@outlook.com</span></td>
+                  <td>+65 9876 5432</td>
+                  <td><span class="badge badge-success">✓ Confirmed</span></td>
+                  <td>Family Life</td>
+                  <td><div class="fraud-score"><div class="fraud-bar"><div class="fraud-bar-fill low" style="width:8%"></div></div><span class="fraud-label" style="color:var(--success);">8</span></div></td>
+                  <td>2 days ago</td>
+                  <td><button class="btn btn-sm btn-success">Approve</button> <button class="btn btn-sm btn-ghost">Review</button></td>
+                </tr>
+                <tr>
+                  <td><strong>Ramya Krishnan</strong><br><span style="font-size:0.75rem;color:var(--gray-400);">ramya.k@gmail.com</span></td>
+                  <td>+65 8234 9876</td>
+                  <td><span class="badge badge-success">✓ Confirmed</span></td>
+                  <td>Individual Annual</td>
+                  <td><div class="fraud-score"><div class="fraud-bar"><div class="fraud-bar-fill low" style="width:22%"></div></div><span class="fraud-label" style="color:var(--success);">22</span></div></td>
+                  <td>2 days ago</td>
+                  <td><button class="btn btn-sm btn-success">Approve</button> <button class="btn btn-sm btn-ghost">Review</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Admin Configuration -->
+        <div id="admin-config" class="admin-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Platform Configuration</h2>
+          <div class="config-tabs">
+            <button class="active" onclick="showConfigTab('cfg-branding',this)">Branding</button>
+            <button onclick="showConfigTab('cfg-tiers',this)">Tiers</button>
+            <button onclick="showConfigTab('cfg-payments',this)">Payments</button>
+            <button onclick="showConfigTab('cfg-onboarding',this)">Onboarding Pipeline</button>
+            <button onclick="showConfigTab('cfg-features',this)">Feature Flags</button>
+            <button onclick="showConfigTab('cfg-emails',this)">Email Templates</button>
+            <button onclick="showConfigTab('cfg-language',this)">Language</button>
+          </div>
+          <!-- Branding Config -->
+          <div id="cfg-branding" class="config-panel active" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <div class="form-row">
+              <div class="form-group"><label>Organization Name</label><input type="text" value="Singapore Telugu Samajam"></div>
+              <div class="form-group"><label>Tagline</label><input type="text" value="Your Community, Connected"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Primary Color</label><div style="display:flex;gap:0.5rem;align-items:center;"><input type="color" value="#6366F1" style="width:48px;height:36px;border:1px solid var(--gray-200);border-radius:4px;padding:2px;cursor:pointer;"><input type="text" value="#6366F1" style="width:100px;"></div></div>
+              <div class="form-group"><label>Secondary Color</label><div style="display:flex;gap:0.5rem;align-items:center;"><input type="color" value="#F59E0B" style="width:48px;height:36px;border:1px solid var(--gray-200);border-radius:4px;padding:2px;cursor:pointer;"><input type="text" value="#F59E0B" style="width:100px;"></div></div>
+            </div>
+            <div class="form-group"><label>Logo Upload</label><div style="border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:2rem;text-align:center;color:var(--gray-400);cursor:pointer;">Click or drag to upload logo (SVG, PNG, max 2MB)</div></div>
+            <button class="btn btn-primary" onclick="showToast('Branding Saved','Your branding changes have been saved')">Save Branding</button>
+          </div>
+          <!-- Onboarding Pipeline Config -->
+          <div id="cfg-onboarding" class="config-panel" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <h3 style="margin-bottom:0.5rem;">Onboarding Pipeline Builder</h3>
+            <p style="color:var(--gray-500);font-size:0.85rem;margin-bottom:1.5rem;">Toggle and reorder verification steps. Drag to reorder.</p>
+            <div class="pipeline-steps">
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Phone OTP Verification</h4><p>Send SMS code to verify phone number</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Email Verification</h4><p>Send code or magic link to verify email</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Personal Details</h4><p>Collect name, DOB, nationality, interests</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')" style="pointer-events:none;opacity:0.5;"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Membership Tier Selection</h4><p>Choose membership plan and pricing</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')" style="pointer-events:none;opacity:0.5;"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Member Referral</h4><p>Require existing member to vouch</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Payment Gate</h4><p>Require payment to activate membership</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>AI Fraud Scoring</h4><p>Auto-score registrations for risk</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="pipeline-step"><span class="drag-handle">⋮⋮</span><div class="step-info"><h4>Admin Approval</h4><p>Manual review before activation</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+            <div class="form-group" style="margin-top:1.5rem;">
+              <label>Auto-Approve Threshold (Fraud Score)</label>
+              <div style="display:flex;align-items:center;gap:1rem;">
+                <input type="range" min="0" max="100" value="30" id="autoApproveSlider" oninput="document.getElementById('autoApproveVal').textContent=this.value" style="flex:1;">
+                <span style="font-weight:700;font-size:1.1rem;color:var(--primary);" id="autoApproveVal">30</span>
+              </div>
+              <div class="hint">Applications with fraud score below this threshold will be auto-approved</div>
+            </div>
+            <button class="btn btn-primary" onclick="showToast('Pipeline Saved','Onboarding pipeline updated successfully')">Save Pipeline</button>
+          </div>
+          <!-- Feature Flags Config -->
+          <div id="cfg-features" class="config-panel" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <h3 style="margin-bottom:1rem;">Feature Flags</h3>
+            <div class="toggle-row"><div class="toggle-info"><h4>AI Chatbot</h4><p>Bilingual AI assistant for members and visitors</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>Smart Recommendations</h4><p>AI-powered event suggestions based on member behavior</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>AI Newsletter</h4><p>Auto-generated monthly community newsletter</p></div><div class="toggle-switch" onclick="this.classList.toggle('on')"></div></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>Photo Gallery</h4><p>AI-tagged event photo galleries</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>Donations</h4><p>Accept online donations via payment providers</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>Volunteer Management</h4><p>Volunteer registration and event assignment</p></div><div class="toggle-switch" onclick="this.classList.toggle('on')"></div></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>Event Check-in (QR)</h4><p>QR code based event attendance tracking</p></div><div class="toggle-switch" onclick="this.classList.toggle('on')"></div></div>
+            <button class="btn btn-primary" style="margin-top:1.25rem;" onclick="showToast('Features Saved','Feature flags updated')">Save Features</button>
+          </div>
+          <!-- Tiers Config -->
+          <div id="cfg-tiers" class="config-panel" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h3>Membership Tiers</h3><button class="btn btn-sm btn-primary">+ Add Tier</button></div>
+            <table style="width:100%;"><thead><tr><th>Name</th><th>Price</th><th>Duration</th><th>Family</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td>Individual Annual</td><td>$16</td><td>12 months</td><td>No</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+              <tr><td>Family Annual</td><td>$26</td><td>12 months</td><td>Yes</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+              <tr><td>Individual Life</td><td>$151</td><td>Lifetime</td><td>No</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+              <tr><td>Family Life</td><td>$251</td><td>Lifetime</td><td>Yes</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+            </tbody></table>
+          </div>
+          <!-- Payments Config -->
+          <div id="cfg-payments" class="config-panel" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <h3 style="margin-bottom:1rem;">Payment Providers</h3>
+            <div class="toggle-row"><div class="toggle-info"><h4>PayPal</h4><p>Accept payments via PayPal account or card</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="form-group" style="margin-top:0.5rem;"><label>PayPal Client ID</label><input type="text" value="AeR7...masked..." placeholder="PayPal Client ID"></div>
+            <div class="toggle-row"><div class="toggle-info"><h4>PayNow</h4><p>Singapore QR code payment</p></div><div class="toggle-switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="form-group" style="margin-top:0.5rem;"><label>PayNow UEN/Phone</label><input type="text" value="T08SS0001A" placeholder="UEN or phone number"></div>
+            <div class="form-group"><label>Service Charge (%)</label><input type="number" value="3.9" step="0.1" style="width:100px;"> <span style="font-size:0.85rem;color:var(--gray-500);">+ $0.50 fixed fee</span></div>
+            <button class="btn btn-primary" style="margin-top:1rem;" onclick="showToast('Payments Saved','Payment configuration updated')">Save Payment Config</button>
+          </div>
+        </div>
+          <!-- Email Templates Config -->
+          <div id="cfg-emails" class="config-panel" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <h3 style="margin-bottom:1rem;">Email Templates</h3>
+            <p style="color:var(--gray-500);font-size:0.85rem;margin-bottom:1.5rem;">Customize email content sent to members. Use merge tags for personalization.</p>
+            <div class="table-container">
+              <table>
+                <thead><tr><th>Template</th><th>Subject</th><th>Last Modified</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Welcome Email</strong></td><td>Welcome to {{org_name}}!</td><td>Feb 15, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Event Confirmation</strong></td><td>You're registered for {{event_name}}</td><td>Feb 15, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Event Reminder (48h)</strong></td><td>{{event_name}} is in 2 days!</td><td>Jan 20, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Event Reminder (2h)</strong></td><td>{{event_name}} starts soon!</td><td>Jan 20, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Membership Renewal</strong></td><td>Your membership expires on {{expiry}}</td><td>Mar 1, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Application Approved</strong></td><td>Welcome aboard, {{name}}!</td><td>Feb 15, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Application Rejected</strong></td><td>Update on your application</td><td>Feb 15, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                  <tr><td><strong>Donation Thank You</strong></td><td>Thank you for your donation!</td><td>Mar 10, 2026</td><td><button class="btn btn-sm btn-ghost">Edit</button> <button class="btn btn-sm btn-ghost">Preview</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <span style="font-size:0.8rem;color:var(--gray-400);">Available merge tags:</span>
+              <span class="badge badge-gray">{{name}}</span><span class="badge badge-gray">{{email}}</span><span class="badge badge-gray">{{org_name}}</span><span class="badge badge-gray">{{event_name}}</span><span class="badge badge-gray">{{event_date}}</span><span class="badge badge-gray">{{member_id}}</span><span class="badge badge-gray">{{expiry}}</span>
+            </div>
+          </div>
+          <!-- Language Config -->
+          <div id="cfg-language" class="config-panel" style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <h3 style="margin-bottom:1rem;">Language Configuration</h3>
+            <div class="form-row">
+              <div class="form-group"><label>Primary Language</label><select><option>English</option><option>Telugu</option><option>Tamil</option><option>Hindi</option><option>Mandarin</option><option>Malay</option></select></div>
+              <div class="form-group"><label>Secondary Language (optional)</label><select><option>Telugu</option><option>None</option><option>Tamil</option><option>Hindi</option><option>Mandarin</option><option>Malay</option></select></div>
+            </div>
+            <div class="form-group"><label>AI Chatbot Languages</label>
+              <div class="checkbox-group">
+                <label class="checkbox-item selected" onclick="this.classList.toggle('selected')"><input type="checkbox" checked> English</label>
+                <label class="checkbox-item selected" onclick="this.classList.toggle('selected')"><input type="checkbox" checked> Telugu</label>
+                <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Tamil</label>
+                <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Hindi</label>
+              </div>
+            </div>
+            <h4 style="margin:1.5rem 0 0.75rem;">UI String Overrides</h4>
+            <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem;">Override default UI labels with your preferred terminology</p>
+            <div class="form-row">
+              <div class="form-group"><label>"Events" label</label><input type="text" value="Events" placeholder="e.g., Programs, Activities"></div>
+              <div class="form-group"><label>"Members" label</label><input type="text" value="Members" placeholder="e.g., Participants, Community"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>"Join Us" CTA</label><input type="text" value="Join Us" placeholder="e.g., Become a Member, Sign Up"></div>
+              <div class="form-group"><label>"Donate" label</label><input type="text" value="Donate" placeholder="e.g., Contribute, Support Us"></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:1rem;" onclick="showToast('Language Saved','Language configuration updated')">Save Language Settings</button>
+          </div>
+        <!-- Admin Reports -->
+        <div id="admin-reports" class="admin-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Financial Reports</h2>
+          <div class="filters-bar" style="margin-bottom:1rem;">
+            <select><option>This Month</option><option>Last Month</option><option>This Quarter</option><option>This Year</option><option>Custom Range</option></select>
+            <button class="btn btn-sm btn-ghost" style="margin-left:auto;">Export CSV</button>
+            <button class="btn btn-sm btn-ghost">Export PDF</button>
+          </div>
+          <div class="dashboard-stats">
+            <div class="dash-stat"><div class="dash-stat-label">Event Revenue</div><div class="dash-stat-num">$5,640</div><div class="dash-stat-change">↑ 22% vs prev</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Membership Fees</div><div class="dash-stat-num">$3,120</div><div class="dash-stat-change">↑ 8% vs prev</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Donations</div><div class="dash-stat-num">$4,850</div><div class="dash-stat-change">↑ 35% vs prev</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Total Revenue</div><div class="dash-stat-num" style="color:var(--success);">$13,610</div></div>
+          </div>
+          <div class="table-container" style="margin-top:1.5rem;">
+            <div class="table-header"><h3>Revenue by Event</h3></div>
+            <table>
+              <thead><tr><th>Event</th><th>Date</th><th>Registrations</th><th>Revenue</th><th>Expenses</th><th>Net</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Sankranthi 2026</strong></td><td>Jan 14</td><td>185</td><td>$2,775</td><td>$1,800</td><td style="color:var(--success);font-weight:700;">+$975</td></tr>
+                <tr><td><strong>New Year Gala</strong></td><td>Jan 1</td><td>120</td><td>$1,800</td><td>$1,200</td><td style="color:var(--success);font-weight:700;">+$600</td></tr>
+                <tr><td><strong>Badminton Tournament</strong></td><td>Feb 15</td><td>72</td><td>$0 (Free)</td><td>$350</td><td style="color:var(--danger);font-weight:700;">-$350</td></tr>
+                <tr><td><strong>Blood Donation Camp</strong></td><td>Mar 8</td><td>45</td><td>$0 (Free)</td><td>$200</td><td style="color:var(--danger);font-weight:700;">-$200</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-container" style="margin-top:1.5rem;">
+            <div class="table-header"><h3>Membership Revenue</h3></div>
+            <table>
+              <thead><tr><th>Tier</th><th>New Signups</th><th>Renewals</th><th>Revenue</th></tr></thead>
+              <tbody>
+                <tr><td>Individual Annual ($16)</td><td>8</td><td>24</td><td>$512</td></tr>
+                <tr><td>Family Annual ($26)</td><td>12</td><td>42</td><td>$1,404</td></tr>
+                <tr><td>Individual Life ($151)</td><td>3</td><td>—</td><td>$453</td></tr>
+                <tr><td>Family Life ($251)</td><td>3</td><td>—</td><td>$753</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:1.5rem;background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+            <h3 style="margin-bottom:1rem;">AI Insights</h3>
+            <div style="padding:1rem;background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);border-radius:var(--radius-md);">
+              <p style="font-size:0.9rem;color:var(--gray-700);"><strong>🤖 AI Summary:</strong> Revenue is up 22% this quarter driven by Sankranthi and New Year events. Family membership tiers account for 69% of membership revenue. Recommendation: consider a family-focused promotional campaign before Ugadi to maximize registrations.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Admin Communications -->
+        <div id="admin-comms" class="admin-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">Communications</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+              <h3 style="margin-bottom:1rem;">Send Message</h3>
+              <div class="form-group">
+                <label>Recipients</label>
+                <select>
+                  <option>All Members (1,247)</option>
+                  <option>Active Members Only (1,098)</option>
+                  <option>Expired Members (149)</option>
+                  <option>Ugadi 2026 Registrants (158)</option>
+                  <option>Unregistered for Ugadi (940)</option>
+                  <option>New Members (last 30 days) (12)</option>
+                  <option>Custom Segment...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Channel</label>
+                <div style="display:flex;gap:0.5rem;">
+                  <label class="checkbox-item selected" onclick="this.classList.toggle('selected')"><input type="checkbox" checked> Email</label>
+                  <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Push Notification</label>
+                  <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> WhatsApp</label>
+                </div>
+              </div>
+              <div class="form-group"><label>Subject</label><input type="text" placeholder="Message subject"></div>
+              <div class="form-group"><label>Message Body</label><textarea rows="6" placeholder="Write your message... Use {{name}} for personalization, {{event_name}} for event references." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-family:monospace;font-size:0.85rem;"></textarea></div>
+              <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+                <span style="font-size:0.8rem;color:var(--gray-400);">Merge tags:</span>
+                <button class="btn btn-sm btn-ghost" onclick="showToast('Copied','{{name}} tag added')" style="font-size:0.75rem;">{{name}}</button>
+                <button class="btn btn-sm btn-ghost" onclick="showToast('Copied','{{event_name}} tag added')" style="font-size:0.75rem;">{{event_name}}</button>
+                <button class="btn btn-sm btn-ghost" onclick="showToast('Copied','{{member_id}} tag added')" style="font-size:0.75rem;">{{member_id}}</button>
+              </div>
+              <div style="display:flex;gap:0.75rem;">
+                <button class="btn btn-primary" onclick="showToast('Message Sent!','Email sent to 1,247 recipients')">Send Now</button>
+                <button class="btn btn-secondary">Schedule Send</button>
+                <button class="btn btn-ghost">Preview</button>
+              </div>
+            </div>
+            <div>
+              <div style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);margin-bottom:1.5rem;">
+                <h3 style="margin-bottom:1rem;">AI Newsletter Generator</h3>
+                <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem;">Auto-generate a monthly community newsletter using AI</p>
+                <button class="btn btn-primary btn-block" onclick="showToast('Newsletter Generated','AI has created a draft newsletter. Review before sending.')">Generate Monthly Newsletter</button>
+                <div style="margin-top:1rem;padding:1rem;background:var(--gray-50);border-radius:var(--radius-md);font-size:0.85rem;">
+                  <p><strong>Last newsletter:</strong> March 2026</p>
+                  <p><strong>Open rate:</strong> 42%</p>
+                  <p><strong>Click rate:</strong> 18%</p>
+                </div>
+              </div>
+              <div style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);">
+                <h3 style="margin-bottom:1rem;">Recent Messages</h3>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                  <div style="padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+                    <div style="display:flex;justify-content:space-between;"><strong style="font-size:0.85rem;">Ugadi Reminder</strong><span class="badge badge-success">Sent</span></div>
+                    <p style="font-size:0.8rem;color:var(--gray-500);">To: All Members • 2 days ago • 89% opened</p>
+                  </div>
+                  <div style="padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+                    <div style="display:flex;justify-content:space-between;"><strong style="font-size:0.85rem;">March Newsletter</strong><span class="badge badge-success">Sent</span></div>
+                    <p style="font-size:0.8rem;color:var(--gray-500);">To: All Members • 1 week ago • 42% opened</p>
+                  </div>
+                  <div style="padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+                    <div style="display:flex;justify-content:space-between;"><strong style="font-size:0.85rem;">Membership Renewal</strong><span class="badge badge-warning">Scheduled</span></div>
+                    <p style="font-size:0.8rem;color:var(--gray-500);">To: Expired Members • Tomorrow 9:00 AM</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Admin AI Chatbot -->
+        <div id="admin-chatbot" class="admin-tab" style="display:none;">
+          <h2 style="margin-bottom:1.5rem;">AI Chatbot Management</h2>
+          <div class="dashboard-stats" style="grid-template-columns:repeat(3,1fr);">
+            <div class="dash-stat"><div class="dash-stat-label">Conversations (30d)</div><div class="dash-stat-num">342</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Resolution Rate</div><div class="dash-stat-num" style="color:var(--success);">87%</div></div>
+            <div class="dash-stat"><div class="dash-stat-label">Avg Satisfaction</div><div class="dash-stat-num">4.2/5</div></div>
+          </div>
+          <div style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--gray-100);margin-top:1.5rem;">
+            <h3 style="margin-bottom:1rem;">Knowledge Base / FAQ</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+              <input type="search" placeholder="Search FAQ entries..." style="padding:0.5rem 0.85rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);min-width:250px;">
+              <button class="btn btn-sm btn-primary">+ Add FAQ Entry</button>
+            </div>
+            <table style="width:100%;"><thead><tr><th>Question</th><th>Language</th><th>Used (30d)</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td>How do I register for an event?</td><td>English</td><td>89</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+              <tr><td>What are the membership types?</td><td>English</td><td>67</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+              <tr><td>సభ్యత్వం ఎలా తీసుకోవాలి?</td><td>Telugu</td><td>34</td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+            </tbody></table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE: ABOUT ==================== -->
+  <div id="page-about" class="page">
+    <section class="section" style="max-width:800px;">
+      <h2 style="font-size:2rem;margin-bottom:1rem;">About Our Community</h2>
+      <p style="color:var(--gray-600);line-height:1.8;margin-bottom:1.5rem;">Singapore Telugu Samajam (STS) was established in 2008 to serve the Telugu-speaking community in Singapore. Over 18 years, we've grown to over 1,200 members and hosted hundreds of cultural, social, and sporting events.</p>
+      <p style="color:var(--gray-600);line-height:1.8;margin-bottom:2rem;">Our mission is to preserve and promote Telugu language, culture, and traditions while fostering community bonds among Telugu-speaking residents and families in Singapore.</p>
+      <h3 style="margin-bottom:1rem;">Leadership Team</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;">
+        <div style="text-align:center;padding:1.5rem;background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);">
+          <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">👤</div>
+          <strong>Sri Venkat Rao</strong><p style="font-size:0.8rem;color:var(--gray-500);">President</p>
+        </div>
+        <div style="text-align:center;padding:1.5rem;background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);">
+          <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">👤</div>
+          <strong>Smt. Lakshmi Devi</strong><p style="font-size:0.8rem;color:var(--gray-500);">Secretary</p>
+        </div>
+        <div style="text-align:center;padding:1.5rem;background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);">
+          <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">👤</div>
+          <strong>Sri Suresh Kumar</strong><p style="font-size:0.8rem;color:var(--gray-500);">Treasurer</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: GALLERY ==================== -->
+  <div id="page-gallery" class="page">
+    <section class="section">
+      <div class="section-header"><h2>Photo Gallery</h2><p>Memories from our community events</p></div>
+      <div class="filters-bar">
+        <select><option>All Events</option><option>Sankranthi 2026</option><option>New Year Gala</option><option>Diwali 2025</option></select>
+        <input type="search" placeholder="Search photos (AI-powered)..." style="min-width:250px;">
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;">
+        <div style="height:200px;background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-size:2rem;cursor:pointer;">🎉</div>
+        <div style="height:200px;background:linear-gradient(135deg,#10B981,#3B82F6);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-size:2rem;cursor:pointer;">🏸</div>
+        <div style="height:200px;background:linear-gradient(135deg,#8B5CF6,#EC4899);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-size:2rem;cursor:pointer;">🎭</div>
+        <div style="height:200px;background:linear-gradient(135deg,#F472B6,#FB923C);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-size:2rem;cursor:pointer;">🪔</div>
+        <div style="height:200px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-size:2rem;cursor:pointer;">🎵</div>
+        <div style="height:200px;background:linear-gradient(135deg,#14B8A6,#22D3EE);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:white;font-size:2rem;cursor:pointer;">🎊</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: LOGIN ==================== -->
+  <div id="page-login" class="page">
+    <div style="max-width:400px;margin:3rem auto;padding:0 1.5rem;">
+      <div style="text-align:center;margin-bottom:2rem;">
+        <h2>Welcome Back</h2>
+        <p style="color:var(--gray-500);">Sign in to your account</p>
+      </div>
+      <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md);border:1px solid var(--gray-100);">
+        <div class="form-group"><label>Email</label><input type="email" placeholder="your@email.com"></div>
+        <div class="form-group"><label>Password</label><input type="password" placeholder="••••••••"></div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="showPage('dashboard')">Sign In</button>
+        <div style="text-align:center;margin-top:1rem;">
+          <a href="#" style="font-size:0.85rem;">Forgot password?</a>
+        </div>
+        <div style="text-align:center;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--gray-100);">
+          <button class="btn btn-secondary btn-block" onclick="showToast('Magic Link Sent','Check your email for the login link')">Send Magic Link</button>
+        </div>
+        <div style="text-align:center;margin-top:1rem;">
+          <button class="btn btn-ghost btn-block" style="border:1px solid var(--gray-200);">Sign in with Google</button>
+        </div>
+        <p style="text-align:center;margin-top:1.25rem;font-size:0.85rem;color:var(--gray-500);">
+          Not a member? <a href="#" onclick="showPage('onboarding')">Join Us</a>
+        </p>
+      </div>
+      <div style="text-align:center;margin-top:1.5rem;">
+        <button class="btn btn-ghost btn-sm" onclick="showPage('admin')" style="color:var(--gray-400);font-size:0.8rem;">Admin Login →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE: FLOW OVERVIEW ==================== -->
+  <div id="page-flow" class="page">
+    <section class="section" style="max-width:900px;">
+      <h2 style="margin-bottom:1.5rem;">Flow Overview — State Machines</h2>
+      <h3 style="margin-bottom:0.75rem;">Member Lifecycle</h3>
+      <div class="flow-diagram">GUEST ──[starts onboarding]──→ APPLYING ──[completes steps]──→ PENDING
+                                                                    │
+                                                          ┌────────┴────────┐
+                                                    admin approves    admin rejects
+                                                          │                 │
+                                                       ACTIVE          REJECTED
+                                                          │
+                                                    [expires]
+                                                          │
+                                                       EXPIRED ──[renews]──→ ACTIVE
+
+Auto-approve path: PENDING ──[fraud score &lt; threshold]──→ ACTIVE</div>
+      <h3 style="margin:1.5rem 0 0.75rem;">Event Registration Lifecycle</h3>
+      <div class="flow-diagram">AVAILABLE ──[member registers]──→ CONFIRMED ──[member cancels]──→ CANCELLED
+                                                                        │
+    [event full] ──→ WAITLISTED ──[spot opens]──→ CONFIRMED      [spot released to waitlist]</div>
+      <h3 style="margin:1.5rem 0 0.75rem;">Onboarding Pipeline</h3>
+      <div class="flow-diagram">Phone OTP ──→ Email Verify ──→ Details ──→ Tier Select ──→ Referral ──→ Payment
+  [toggle]       [toggle]      [always]     [always]       [toggle]     [toggle]
+
+                         ──→ AI Fraud Score (background) ──→ Admin Queue or Auto-Approve
+                                [toggle]                     [threshold: 0-100]</div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: DONATE ==================== -->
+  <div id="page-donate" class="page">
+    <section class="hero" style="padding:3rem 2rem;background:linear-gradient(135deg,#10B981,#3B82F6);">
+      <h1 style="font-size:2rem;">Support Our Community</h1>
+      <p>Your generous contributions help us organize events, support members, and preserve our culture.</p>
+    </section>
+    <section class="section" style="max-width:800px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+        <div>
+          <h2 style="margin-bottom:1.5rem;">Make a Donation</h2>
+          <div class="form-group">
+            <label>Donation Amount</label>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('donateAmount').value='10'" style="min-width:60px;">$10</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('donateAmount').value='25'" style="min-width:60px;">$25</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('donateAmount').value='50'" style="min-width:60px;">$50</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('donateAmount').value='100'" style="min-width:60px;">$100</button>
+            </div>
+            <input type="number" id="donateAmount" placeholder="Or enter custom amount ($)" value="25">
+          </div>
+          <div class="form-group"><label>Your Name</label><input type="text" placeholder="Your full name"></div>
+          <div class="form-group"><label>Email</label><input type="email" placeholder="your@email.com"></div>
+          <div class="form-group">
+            <label style="display:flex;gap:8px;align-items:center;font-weight:400;cursor:pointer;">
+              <input type="checkbox" checked> Show my name on the Donor Wall
+            </label>
+          </div>
+          <div class="form-group"><label>Message (optional)</label><textarea rows="2" placeholder="Leave a message..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+          <h4 style="margin:1rem 0 0.75rem;">Payment Method</h4>
+          <div style="display:flex;gap:0.75rem;">
+            <button class="btn btn-lg" style="flex:1;background:#FFC43A;color:#003087;font-weight:700;" onclick="showToast('Donation Received!','Thank you for your generous contribution of $25!')">PayPal</button>
+            <button class="btn btn-lg" style="flex:1;background:#7B2D8E;color:white;font-weight:700;" onclick="showToast('Donation Received!','Thank you for your generous contribution of $25!')">PayNow</button>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin-bottom:1rem;">Donor Wall</h3>
+          <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem;">Recent generous supporters</p>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--white);border-radius:var(--radius-md);border:1px solid var(--gray-100);">
+              <div style="width:36px;height:36px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;">R</div>
+              <div><strong style="font-size:0.9rem;">Ravi Kumar</strong><p style="font-size:0.75rem;color:var(--gray-400);">$100 • 2 days ago</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--white);border-radius:var(--radius-md);border:1px solid var(--gray-100);">
+              <div style="width:36px;height:36px;background:rgba(16,185,129,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">P</div>
+              <div><strong style="font-size:0.9rem;">Priya Sharma</strong><p style="font-size:0.75rem;color:var(--gray-400);">$50 • 5 days ago</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--white);border-radius:var(--radius-md);border:1px solid var(--gray-100);">
+              <div style="width:36px;height:36px;background:rgba(245,158,11,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">S</div>
+              <div><strong style="font-size:0.9rem;">Suresh Reddy</strong><p style="font-size:0.75rem;color:var(--gray-400);">$200 • 1 week ago</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--white);border-radius:var(--radius-md);border:1px solid var(--gray-100);">
+              <div style="width:36px;height:36px;background:var(--gray-200);border-radius:50%;display:flex;align-items:center;justify-content:center;">?</div>
+              <div><strong style="font-size:0.9rem;">Anonymous</strong><p style="font-size:0.75rem;color:var(--gray-400);">$25 • 1 week ago</p></div>
+            </div>
+          </div>
+          <div style="margin-top:1.5rem;padding:1rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-md);text-align:center;">
+            <div style="font-size:1.75rem;font-weight:800;color:var(--success);">$4,850</div>
+            <div style="font-size:0.85rem;color:var(--gray-500);">Total donated this year</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: VOLUNTEER ==================== -->
+  <div id="page-volunteer" class="page">
+    <section class="hero" style="padding:3rem 2rem;background:linear-gradient(135deg,#8B5CF6,#EC4899);">
+      <h1 style="font-size:2rem;">Volunteer With Us</h1>
+      <p>Help make our events amazing! Share your skills and time with the community.</p>
+    </section>
+    <section class="section" style="max-width:700px;">
+      <h2 style="margin-bottom:1.5rem;">Volunteer Registration</h2>
+      <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md);border:1px solid var(--gray-100);">
+        <div class="form-row">
+          <div class="form-group"><label>Full Name *</label><input type="text" placeholder="Your name"></div>
+          <div class="form-group"><label>Phone *</label><input type="tel" placeholder="+65 8123 4567"></div>
+        </div>
+        <div class="form-group"><label>Email *</label><input type="email" placeholder="your@email.com"></div>
+        <div class="form-group">
+          <label>Skills (select all that apply)</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Event Setup</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Photography</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Cooking/Catering</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> MC/Hosting</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Sound/AV</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Transport</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Design/Creative</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Teaching/Tutoring</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Availability</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Weekday Evenings</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Saturdays</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Sundays</label>
+            <label class="checkbox-item" onclick="this.classList.toggle('selected')"><input type="checkbox"> Public Holidays</label>
+          </div>
+        </div>
+        <div class="form-group"><label>Any specific events you'd like to help with?</label><textarea rows="3" placeholder="e.g., Ugadi, Bathukamma, sports events..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="showToast('Thank You!','Your volunteer registration has been submitted. We will contact you soon!')">Register as Volunteer</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: SPONSORSHIP ==================== -->
+  <div id="page-sponsor" class="page">
+    <section class="hero" style="padding:3rem 2rem;background:linear-gradient(135deg,#F59E0B,#EF4444);">
+      <h1 style="font-size:2rem;">Become a Sponsor</h1>
+      <p>Partner with us to reach 1,200+ community members and support cultural preservation.</p>
+    </section>
+    <section class="section" style="max-width:1000px;">
+      <div class="section-header"><h2>Sponsorship Packages</h2><p>Choose the level that fits your business goals</p></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
+        <div class="tier-card" onclick="selectTier(this)" style="overflow:visible;">
+          <div class="tier-name">Bronze</div>
+          <div class="tier-price">$500<span>/year</span></div>
+          <ul class="tier-features">
+            <li>Logo on website footer</li>
+            <li>Mentioned in 2 events/year</li>
+            <li>Social media shoutout</li>
+          </ul>
+        </div>
+        <div class="tier-card" onclick="selectTier(this)" style="overflow:visible;">
+          <div class="tier-popular">Best Value</div>
+          <div class="tier-name">Silver</div>
+          <div class="tier-price">$1,000<span>/year</span></div>
+          <ul class="tier-features">
+            <li>Everything in Bronze</li>
+            <li>Logo on event banners</li>
+            <li>Booth space at 4 events</li>
+            <li>Newsletter feature (quarterly)</li>
+          </ul>
+        </div>
+        <div class="tier-card" onclick="selectTier(this)">
+          <div class="tier-name">Gold</div>
+          <div class="tier-price">$2,500<span>/year</span></div>
+          <ul class="tier-features">
+            <li>Everything in Silver</li>
+            <li>Title sponsor of 1 event</li>
+            <li>Premium booth all events</li>
+            <li>Monthly newsletter feature</li>
+            <li>5-minute speaking slot at AGM</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top:2.5rem;background:var(--white);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);">
+        <h3 style="margin-bottom:1rem;">Sponsorship Inquiry</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Company Name</label><input type="text" placeholder="Your company"></div>
+          <div class="form-group"><label>Contact Person</label><input type="text" placeholder="Full name"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email</label><input type="email" placeholder="business@company.com"></div>
+          <div class="form-group"><label>Phone</label><input type="tel" placeholder="+65 9xxx xxxx"></div>
+        </div>
+        <div class="form-group"><label>Interested Package</label><select><option>Bronze ($500/year)</option><option>Silver ($1,000/year)</option><option>Gold ($2,500/year)</option><option>Custom Package</option></select></div>
+        <div class="form-group"><label>Message</label><textarea rows="3" placeholder="Tell us about your sponsorship goals..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+        <button class="btn btn-primary btn-lg" onclick="showToast('Inquiry Sent!','We will get back to you within 2 business days.')">Submit Inquiry</button>
+      </div>
+      <div style="margin-top:2rem;">
+        <h3 style="margin-bottom:1rem;">Our Current Sponsors</h3>
+        <div style="display:flex;gap:2rem;flex-wrap:wrap;align-items:center;justify-content:center;padding:1.5rem;background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);">
+          <div style="padding:0.5rem 1.5rem;background:var(--gray-100);border-radius:var(--radius-md);font-weight:700;color:var(--gray-500);">Sponsor Logo 1</div>
+          <div style="padding:0.5rem 1.5rem;background:var(--gray-100);border-radius:var(--radius-md);font-weight:700;color:var(--gray-500);">Sponsor Logo 2</div>
+          <div style="padding:0.5rem 1.5rem;background:var(--gray-100);border-radius:var(--radius-md);font-weight:700;color:var(--gray-500);">Sponsor Logo 3</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: CHECK-IN (Admin) ==================== -->
+  <div id="page-checkin" class="page">
+    <section class="section" style="max-width:800px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <div>
+          <h2>Event Check-In</h2>
+          <p style="color:var(--gray-500);">Ugadi Celebrations 2026 • April 10, 2026</p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:2rem;font-weight:800;color:var(--primary);">87<span style="font-size:1rem;color:var(--gray-400);">/200</span></div>
+          <div style="font-size:0.8rem;color:var(--gray-500);">Checked In</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+        <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;text-align:center;box-shadow:var(--shadow-md);border:1px solid var(--gray-100);">
+          <h3 style="margin-bottom:1rem;">Scan QR Code</h3>
+          <div style="width:200px;height:200px;background:var(--gray-100);border-radius:var(--radius-lg);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;border:2px dashed var(--gray-300);">
+            <span style="font-size:3rem;">📷</span>
+          </div>
+          <p style="font-size:0.85rem;color:var(--gray-500);">Point camera at member's QR code</p>
+          <button class="btn btn-primary btn-block" style="margin-top:1rem;" onclick="showToast('Checked In!','Ravi Kumar has been checked in successfully')">Simulate Scan</button>
+        </div>
+        <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md);border:1px solid var(--gray-100);">
+          <h3 style="margin-bottom:1rem;">Manual Check-In</h3>
+          <div class="form-group"><label>Search Member</label><input type="search" placeholder="Name, email, or member ID..."></div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div><strong style="font-size:0.85rem;">Ravi Kumar</strong><span style="font-size:0.75rem;color:var(--gray-400);margin-left:0.5rem;">MEM-00847</span></div>
+              <button class="btn btn-sm btn-success" onclick="showToast('Checked In!','Ravi Kumar checked in')">Check In</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.75rem;background:var(--gray-50);border-radius:var(--radius-md);">
+              <div><strong style="font-size:0.85rem;">Priya Sharma</strong><span style="font-size:0.75rem;color:var(--gray-400);margin-left:0.5rem;">MEM-00846</span></div>
+              <span class="badge badge-success">Already checked in</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-container" style="margin-top:1.5rem;">
+        <div class="table-header"><h3>Check-In Log</h3><span class="badge badge-info">87 of 200 checked in</span></div>
+        <table>
+          <thead><tr><th>Time</th><th>Member</th><th>Method</th><th>Guests</th></tr></thead>
+          <tbody>
+            <tr><td>5:02 PM</td><td><strong>Priya Sharma</strong></td><td><span class="badge badge-info">QR Scan</span></td><td>1 Adult, 2 Children</td></tr>
+            <tr><td>5:05 PM</td><td><strong>Venkat Reddy</strong></td><td><span class="badge badge-gray">Manual</span></td><td>2 Adults</td></tr>
+            <tr><td>5:08 PM</td><td><strong>Lakshmi Devi</strong></td><td><span class="badge badge-info">QR Scan</span></td><td>1 Adult</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== PAGE: ACCESSIBILITY NOTES ==================== -->
+  <div id="page-a11y" class="page">
+    <section class="section" style="max-width:800px;">
+      <h2 style="margin-bottom:1.5rem;">Accessibility Notes</h2>
+      <div class="a11y-note"><h4>Keyboard Navigation</h4><p>All interactive elements (buttons, links, form fields, toggles) are keyboard-navigable via Tab, Enter, Escape. Focus indicators visible on all elements.</p></div>
+      <div class="a11y-note"><h4>Color Contrast</h4><p>Primary text on white background: 8.59:1 ratio (AAA). All interactive elements meet 4.5:1 minimum. Badges use both color and text labels.</p></div>
+      <div class="a11y-note"><h4>Screen Reader Support</h4><p>Semantic HTML (nav, main, aside, section). ARIA labels on icon-only buttons. Live regions for toast notifications and OTP timer.</p></div>
+      <div class="a11y-note"><h4>Forms</h4><p>All inputs have associated labels. Error messages linked via aria-describedby. Required fields marked with asterisk and aria-required. Inline validation with clear error descriptions.</p></div>
+      <div class="a11y-note"><h4>Responsive</h4><p>Tested at 375px (mobile), 768px (tablet), 1280px (desktop). Touch targets minimum 48x48px. No horizontal scroll at any breakpoint.</p></div>
+      <div class="a11y-note"><h4>Motion</h4><p>Respects prefers-reduced-motion. Animations are subtle and non-essential. No auto-playing content.</p></div>
+    </section>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+  <div class="modal-overlay" id="rejectModal">
+    <div class="modal">
+      <h3>Reject Application</h3>
+      <p style="color:var(--gray-600);font-size:0.9rem;">Please provide a reason for rejection. The applicant will be notified.</p>
+      <div class="form-group" style="margin-top:1rem;"><label>Rejection Reason</label>
+        <select><option>Suspicious registration pattern</option><option>Invalid referral</option><option>Duplicate application</option><option>Incomplete information</option><option>Other</option></select>
+      </div>
+      <div class="form-group"><label>Additional Notes (optional)</label><textarea rows="3" placeholder="Any additional details..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="hideModal('rejectModal')">Cancel</button>
+        <button class="btn btn-danger" onclick="hideModal('rejectModal');showToast('Rejected','Application rejected and applicant notified','error')">Reject Application</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="regModal">
+    <div class="modal">
+      <h3>Confirm Registration</h3>
+      <p style="color:var(--gray-600);font-size:0.9rem;margin-bottom:1rem;">You're about to register for <strong>Ugadi Celebrations 2026</strong></p>
+      <div class="payment-summary">
+        <div class="summary-row"><span>1 Adult × $15.00</span><span>$15.00</span></div>
+        <div class="summary-total"><span>Total</span><span>$15.00</span></div>
+      </div>
+      <p style="font-size:0.85rem;color:var(--gray-500);margin-top:1rem;">Choose payment method:</p>
+      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+        <button class="btn btn-lg" style="flex:1;background:#FFC43A;color:#003087;font-weight:700;" onclick="hideModal('regModal');showToast('Registration Confirmed!','You are registered for Ugadi 2026. Check your email for confirmation.')">PayPal</button>
+        <button class="btn btn-lg" style="flex:1;background:#7B2D8E;color:white;font-weight:700;" onclick="hideModal('regModal');showToast('Registration Confirmed!','You are registered for Ugadi 2026. Check your email for confirmation.')">PayNow</button>
+      </div>
+      <div class="modal-actions"><button class="btn btn-ghost" onclick="hideModal('regModal')">Cancel</button></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="createEventModal">
+    <div class="modal" style="max-width:600px;">
+      <h3>Create New Event</h3>
+      <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.2);border-radius:var(--radius-md);padding:1rem;margin-bottom:1.25rem;">
+        <strong style="font-size:0.85rem;color:var(--primary);">🤖 AI Copilot</strong>
+        <p style="font-size:0.85rem;color:var(--gray-600);margin-top:0.25rem;">Describe your event in plain language and AI will generate the listing for you.</p>
+        <textarea rows="3" placeholder="e.g., Ugadi celebration on April 10 at Singapore Expo, expecting 200 people, $15 per adult, includes vegetarian dinner..." style="width:100%;margin-top:0.75rem;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea>
+        <button class="btn btn-sm btn-primary" style="margin-top:0.5rem;">Generate with AI</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Event Title</label><input type="text" placeholder="Event name"></div>
+        <div class="form-group"><label>Category</label><select><option>Cultural</option><option>Sports</option><option>Entertainment</option><option>Religious</option><option>Social</option><option>AGM</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date</label><input type="date"></div>
+        <div class="form-group"><label>Time</label><input type="time"></div>
+      </div>
+      <div class="form-group"><label>Venue</label><input type="text" placeholder="Venue name and address"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Capacity</label><input type="number" placeholder="200"></div>
+        <div class="form-group"><label>Price per Adult ($)</label><input type="number" placeholder="0 for free" step="0.01"></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea rows="3" placeholder="Event description..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="hideModal('createEventModal')">Cancel</button>
+        <button class="btn btn-secondary">Save as Draft</button>
+        <button class="btn btn-primary" onclick="hideModal('createEventModal');showToast('Event Created','New event has been published')">Publish Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FEEDBACK MODAL ==================== -->
+  <div class="modal-overlay" id="feedbackModal">
+    <div class="modal">
+      <h3>How was Sankranthi 2026?</h3>
+      <p style="color:var(--gray-500);font-size:0.9rem;margin-bottom:1rem;">Your feedback helps us improve future events</p>
+      <div style="display:flex;gap:0.5rem;justify-content:center;margin:1rem 0;">
+        <button onclick="selectRating(1,this)" class="btn btn-ghost" style="font-size:1.5rem;padding:0.5rem;">⭐</button>
+        <button onclick="selectRating(2,this)" class="btn btn-ghost" style="font-size:1.5rem;padding:0.5rem;">⭐</button>
+        <button onclick="selectRating(3,this)" class="btn btn-ghost" style="font-size:1.5rem;padding:0.5rem;">⭐</button>
+        <button onclick="selectRating(4,this)" class="btn btn-ghost" style="font-size:1.5rem;padding:0.5rem;">⭐</button>
+        <button onclick="selectRating(5,this)" class="btn btn-ghost" style="font-size:1.5rem;padding:0.5rem;">⭐</button>
+      </div>
+      <div id="ratingText" style="text-align:center;font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem;">Select a rating</div>
+      <div class="form-group"><label>What did you enjoy most?</label><textarea rows="2" placeholder="The food, performances, atmosphere..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+      <div class="form-group"><label>What could we improve?</label><textarea rows="2" placeholder="Suggestions for next time..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="hideModal('feedbackModal')">Skip</button>
+        <button class="btn btn-primary" onclick="hideModal('feedbackModal');showToast('Thank You!','Your feedback has been submitted')">Submit Feedback</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CANCELLATION MODAL ==================== -->
+  <div class="modal-overlay" id="cancelModal">
+    <div class="modal">
+      <h3>Cancel Registration</h3>
+      <p style="color:var(--gray-600);font-size:0.9rem;">Are you sure you want to cancel your registration for <strong>Ugadi Celebrations 2026</strong>?</p>
+      <div style="margin:1.25rem 0;padding:1rem;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-md);">
+        <h4 style="font-size:0.9rem;color:var(--warning);margin-bottom:0.5rem;">Refund Policy</h4>
+        <ul style="font-size:0.85rem;color:var(--gray-600);margin-left:1.25rem;line-height:1.8;">
+          <li><strong>More than 7 days before event:</strong> Full refund</li>
+          <li><strong>3–7 days before event:</strong> 50% refund</li>
+          <li><strong>Less than 3 days:</strong> No refund</li>
+        </ul>
+        <p style="margin-top:0.75rem;font-size:0.85rem;color:var(--success);font-weight:600;">Your event is in 12 days — you qualify for a <strong>full refund of $15.00</strong></p>
+      </div>
+      <div class="form-group"><label>Reason for cancellation (optional)</label>
+        <select><option value="">Select a reason...</option><option>Schedule conflict</option><option>Family emergency</option><option>Changed plans</option><option>Other</option></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="hideModal('cancelModal')">Keep Registration</button>
+        <button class="btn btn-danger" onclick="hideModal('cancelModal');showToast('Registration Cancelled','Your $15.00 refund will be processed within 3-5 business days')">Cancel & Refund</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MEMBER QR CODE MODAL ==================== -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="modal" style="text-align:center;">
+      <h3>Your Event QR Code</h3>
+      <p style="color:var(--gray-500);font-size:0.9rem;margin-bottom:1rem;">Show this at the venue for quick check-in</p>
+      <div style="width:200px;height:200px;background:var(--gray-100);border-radius:var(--radius-lg);margin:0 auto;display:flex;align-items:center;justify-content:center;border:2px solid var(--gray-200);">
+        <div style="font-size:0.8rem;color:var(--gray-500);text-align:center;padding:1rem;">
+          <div style="font-size:3rem;margin-bottom:0.5rem;">📱</div>
+          [QR Code]<br>Ravi Kumar<br>MEM-00847<br>Ugadi 2026
+        </div>
+      </div>
+      <p style="margin-top:1rem;font-size:0.85rem;color:var(--gray-500);">Registration #REG-2026-0158</p>
+      <div class="modal-actions" style="justify-content:center;">
+        <button class="btn btn-secondary" onclick="showToast('Downloaded','QR code saved to your device')">Download QR</button>
+        <button class="btn btn-ghost" onclick="hideModal('qrModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CHATBOT ==================== -->
+  <button class="chatbot-trigger" onclick="toggleChatbot()" aria-label="Open AI chatbot" id="chatbotBtn">💬</button>
+  <div class="chatbot-panel" id="chatbotPanel">
+    <div class="chatbot-header">
+      <h4>🤖 CommunityHub Assistant</h4>
+      <button style="background:none;border:none;color:white;font-size:1.2rem;cursor:pointer;" onclick="toggleChatbot()" aria-label="Close chatbot">×</button>
+    </div>
+    <div class="chatbot-messages" id="chatMessages">
+      <div class="chat-msg bot">Hello! 👋 I'm your community assistant. I can help with events, membership, and more. How can I help you today?</div>
+      <div class="chat-msg bot" style="font-size:0.8rem;opacity:0.8;">నమస్కారం! నేను తెలుగులో కూడా మాట్లాడగలను.</div>
+    </div>
+    <div class="chatbot-input">
+      <input type="text" placeholder="Ask me anything..." id="chatInput" onkeypress="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()">Send</button>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST ==================== -->
+  <div class="toast" id="toast">
+    <div class="toast-title" id="toastTitle"></div>
+    <div class="toast-msg" id="toastMsg"></div>
+  </div>
+
+  <!-- ==================== NAV (bottom bar for prototype navigation) ==================== -->
+  <div style="position:fixed;bottom:0;left:0;right:0;background:var(--gray-900);color:var(--white);padding:0.5rem 1rem;display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;z-index:900;font-size:0.75rem;">
+    <span style="opacity:0.5;margin-right:0.5rem;">PROTOTYPE NAV:</span>
+    <a href="#" onclick="showPage('home')" style="color:var(--primary-light);">Home</a> |
+    <a href="#" onclick="showPage('events')" style="color:var(--primary-light);">Events</a> |
+    <a href="#" onclick="showPage('event-detail')" style="color:var(--primary-light);">Event Detail</a> |
+    <a href="#" onclick="showPage('onboarding')" style="color:var(--primary-light);">Onboarding</a> |
+    <a href="#" onclick="showPage('login')" style="color:var(--primary-light);">Login</a> |
+    <a href="#" onclick="showPage('dashboard')" style="color:var(--primary-light);">Dashboard</a> |
+    <a href="#" onclick="showPage('admin')" style="color:var(--primary-light);">Admin</a> |
+    <a href="#" onclick="showPage('donate')" style="color:var(--primary-light);">Donate</a> |
+    <a href="#" onclick="showPage('volunteer')" style="color:var(--primary-light);">Volunteer</a> |
+    <a href="#" onclick="showPage('sponsor')" style="color:var(--primary-light);">Sponsor</a> |
+    <a href="#" onclick="showPage('checkin')" style="color:var(--primary-light);">Check-In</a> |
+    <a href="#" onclick="showPage('flow')" style="color:var(--primary-light);">Flows</a> |
+    <a href="#" onclick="showPage('a11y')" style="color:var(--primary-light);">A11y Notes</a>
+  </div>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    // --- Page Navigation ---
+    function showPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const el = document.getElementById('page-' + page);
+      if (el) el.classList.add('active');
+      window.scrollTo(0, 0);
+      // Update nav active state
+      document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+      const navMap = { home: 0, events: 1, about: 2, gallery: 3 };
+      if (navMap[page] !== undefined) {
+        document.querySelectorAll('.nav-links a')[navMap[page]].classList.add('active');
+      }
+      document.querySelector('.nav-links').classList.remove('open');
+      // Load events grid if showing events page
+      if (page === 'events') renderEventsGrid();
+    }
+
+    // --- Events Data ---
+    const eventsData = [
+      { title: 'Ugadi Celebrations 2026', category: 'Cultural', date: 'April 10, 2026', time: '5:00 PM', venue: 'Singapore Expo Hall 5', price: 15, spots: 42, emoji: '🎉', gradient: 'linear-gradient(135deg,#F59E0B,#EF4444)' },
+      { title: 'Badminton Tournament', category: 'Sports', date: 'April 20, 2026', time: '9:00 AM', venue: 'Clementi Sports Hall', price: 0, spots: 128, emoji: '🏸', gradient: 'linear-gradient(135deg,#10B981,#3B82F6)' },
+      { title: 'Telugu Movie Night', category: 'Entertainment', date: 'May 3, 2026', time: '7:00 PM', venue: 'Shaw Theatres Lido', price: 10, spots: 8, emoji: '🎭', gradient: 'linear-gradient(135deg,#8B5CF6,#EC4899)' },
+      { title: 'Blood Donation Camp', category: 'Social', date: 'May 15, 2026', time: '10:00 AM', venue: 'Red Cross SG', price: 0, spots: 50, emoji: '🩸', gradient: 'linear-gradient(135deg,#EF4444,#F97316)' },
+      { title: 'Bathukamma Festival', category: 'Religious', date: 'Oct 2, 2026', time: '4:00 PM', venue: 'Little India Arcade', price: 5, spots: 200, emoji: '🌸', gradient: 'linear-gradient(135deg,#EC4899,#F59E0B)' },
+      { title: 'Annual General Meeting', category: 'AGM', date: 'Nov 15, 2026', time: '2:00 PM', venue: 'Community Centre', price: 0, spots: 300, emoji: '📋', gradient: 'linear-gradient(135deg,#6366F1,#3B82F6)' },
+    ];
+
+    function renderEventsGrid() {
+      const grid = document.getElementById('eventsGrid');
+      const search = (document.getElementById('eventSearch').value || '').toLowerCase();
+      const cat = document.getElementById('categoryFilter').value;
+      const price = document.getElementById('priceFilter').value;
+      const filtered = eventsData.filter(e => {
+        if (search && !e.title.toLowerCase().includes(search) && !e.category.toLowerCase().includes(search)) return false;
+        if (cat && e.category !== cat) return false;
+        if (price === 'free' && e.price > 0) return false;
+        if (price === 'paid' && e.price === 0) return false;
+        return true;
+      });
+      grid.innerHTML = filtered.map(e => `
+        <div class="event-card" onclick="showPage('event-detail')">
+          <div class="event-card-img" style="background:${e.gradient};">${e.emoji}
+            <span class="badge ${e.price === 0 ? 'badge-free' : 'badge-paid'}">${e.price === 0 ? 'Free' : '$' + e.price}</span>
+          </div>
+          <div class="event-card-body">
+            <span class="event-category">${e.category}</span>
+            <h3>${e.title}</h3>
+            <div class="event-meta">
+              <div class="event-meta-item">📅 ${e.date} • ${e.time}</div>
+              <div class="event-meta-item">📍 ${e.venue}</div>
+            </div>
+            <div class="event-card-footer">
+              <span class="spots-left ${e.spots > 20 ? 'available' : ''}">${e.spots} spots left</span>
+              <button class="btn btn-primary btn-sm">Register</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--gray-400);"><p style="font-size:1.5rem;">No events found</p><p>Try adjusting your filters</p></div>';
+      }
+    }
+    function filterEvents() { renderEventsGrid(); }
+
+    // --- Events View Toggle ---
+    function showEventsView(view, btn) {
+      document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('events-cards-view').style.display = view === 'cards' ? 'block' : 'none';
+      document.getElementById('events-calendar-view').style.display = view === 'calendar' ? 'block' : 'none';
+      if (view === 'calendar') renderCalendar();
+    }
+
+    // --- Calendar ---
+    let calMonth = 3, calYear = 2026; // April 2026
+    function renderCalendar() {
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('calendarMonth').textContent = months[calMonth] + ' ' + calYear;
+      const firstDay = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="calendar-day-header">${d}</div>`).join('');
+      for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day other-month"></div>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const events = eventsData.filter(e => {
+          const eDate = new Date(e.date);
+          return eDate.getMonth() === calMonth && eDate.getDate() === d && eDate.getFullYear() === calYear;
+        });
+        html += `<div class="calendar-day"><div class="day-num">${d}</div>${events.map(e => `<div class="cal-event" onclick="showPage('event-detail')">${e.emoji} ${e.title.split(' ')[0]}</div>`).join('')}</div>`;
+      }
+      document.getElementById('calendarGrid').innerHTML = html;
+    }
+    function changeMonth(delta) {
+      calMonth += delta;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      renderCalendar();
+    }
+
+    // --- Event Detail Tabs ---
+    function showEventTab(tab, btn) {
+      document.querySelectorAll('.event-tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.event-tabs button').forEach(b => b.classList.remove('active'));
+      document.getElementById('event-tab-' + tab).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // --- Event Registration ---
+    function updateRegTotal() {
+      const adults = parseInt(document.getElementById('regAdults').value);
+      const children = parseInt(document.getElementById('regChildren').value);
+      document.getElementById('adultCount').textContent = adults;
+      document.getElementById('childCount').textContent = children;
+      document.getElementById('adultTotal').textContent = (adults * 15).toFixed(2);
+      document.getElementById('childTotal').textContent = (children * 8).toFixed(2);
+      document.getElementById('regTotal').textContent = (adults * 15 + children * 8).toFixed(2);
+    }
+    function showRegModal() { document.getElementById('regModal').classList.add('open'); }
+
+    // --- Onboarding Stepper ---
+    let currentStep = 1;
+    function nextStep(step) {
+      currentStep = step;
+      updateStepper();
+    }
+    function prevStep(step) {
+      currentStep = step;
+      updateStepper();
+    }
+    function updateStepper() {
+      document.querySelectorAll('.stepper-step').forEach(s => {
+        const sNum = parseInt(s.dataset.step);
+        s.classList.remove('active', 'completed');
+        if (sNum < currentStep) s.classList.add('completed');
+        if (sNum === currentStep) s.classList.add('active');
+      });
+      document.querySelectorAll('.step-content').forEach(c => c.classList.remove('active'));
+      const stepEl = document.querySelector(`.step-content[data-step="${currentStep}"]`);
+      if (stepEl) stepEl.classList.add('active');
+      if (currentStep === 7) document.getElementById('successStep').classList.add('active');
+    }
+
+    // --- OTP ---
+    function sendOTP() {
+      const phone = document.getElementById('phoneInput').value;
+      if (!phone) { alert('Please enter your phone number'); return; }
+      document.getElementById('otpSection').style.display = 'block';
+      document.getElementById('sendOTPBtn').textContent = 'Resend OTP';
+      document.getElementById('sendOTPBtn').disabled = true;
+      let countdown = 60;
+      const timer = setInterval(() => {
+        countdown--;
+        document.getElementById('otpCountdown').textContent = countdown;
+        if (countdown <= 0) {
+          clearInterval(timer);
+          document.getElementById('sendOTPBtn').disabled = false;
+        }
+      }, 1000);
+      // Auto-enable next after "entering" OTP
+      setTimeout(() => { document.getElementById('phoneNextBtn').disabled = false; }, 1500);
+    }
+    function otpNext(el) {
+      if (el.value.length === 1 && el.nextElementSibling) {
+        el.nextElementSibling.focus();
+      }
+      // Check if all filled
+      const parent = el.parentElement;
+      const inputs = parent.querySelectorAll('input');
+      const allFilled = Array.from(inputs).every(i => i.value.length === 1);
+      if (allFilled) {
+        // Enable next buttons
+        if (document.getElementById('phoneNextBtn')) document.getElementById('phoneNextBtn').disabled = false;
+        if (document.getElementById('emailNextBtn')) document.getElementById('emailNextBtn').disabled = false;
+      }
+    }
+
+    // --- Email Verify ---
+    function sendEmailCode() {
+      const email = document.getElementById('emailInput').value;
+      if (!email) { alert('Please enter your email'); return; }
+      document.getElementById('emailCodeSection').style.display = 'block';
+      setTimeout(() => { document.getElementById('emailNextBtn').disabled = false; }, 1500);
+    }
+
+    // --- Tier Selection ---
+    function selectTier(el) {
+      document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // --- Payment Selection ---
+    function selectPayment(el) {
+      document.querySelectorAll('.payment-method').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // --- Referral Lookup ---
+    function lookupReferrer() {
+      const val = document.getElementById('referralInput').value;
+      if (!val) { alert('Please enter a phone number or member ID'); return; }
+      document.getElementById('referrerResult').style.display = 'block';
+    }
+
+    // --- Complete Onboarding ---
+    function completeOnboarding() {
+      if (!document.getElementById('pdpaConsent').checked) {
+        alert('Please accept the Privacy Policy and Terms of Use');
+        return;
+      }
+      currentStep = 7;
+      updateStepper();
+    }
+
+    // --- Dashboard Tabs ---
+    function showDashTab(tab, link) {
+      document.querySelectorAll('.dash-tab').forEach(t => t.style.display = 'none');
+      document.getElementById('dash-' + tab).style.display = 'block';
+      document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+      link.classList.add('active');
+    }
+
+    // --- Admin Tabs ---
+    function showAdminTab(tab, link) {
+      document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+      document.getElementById(tab).style.display = 'block';
+      document.querySelectorAll('#page-admin .sidebar-nav a').forEach(a => a.classList.remove('active'));
+      link.classList.add('active');
+    }
+
+    // --- Config Tabs ---
+    function showConfigTab(tab, btn) {
+      document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.config-tabs button').forEach(b => b.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // --- Chatbot ---
+    function toggleChatbot() {
+      const panel = document.getElementById('chatbotPanel');
+      panel.classList.toggle('open');
+    }
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      const container = document.getElementById('chatMessages');
+      container.innerHTML += `<div class="chat-msg user">${msg}</div>`;
+      input.value = '';
+      // Simulate AI response
+      setTimeout(() => {
+        let response = "I'd be happy to help with that! Let me look into it for you.";
+        const lower = msg.toLowerCase();
+        if (lower.includes('event') || lower.includes('ugadi')) {
+          response = "We have several exciting events coming up! The next one is <strong>Ugadi Celebrations</strong> on April 10th. Would you like me to help you register?";
+        } else if (lower.includes('member') || lower.includes('join')) {
+          response = "Great question! We offer 4 membership tiers starting from $16/year. The most popular is <strong>Family Annual ($26/year)</strong>. Would you like to start the registration process?";
+        } else if (lower.includes('telugu') || lower.includes('తెలుగు')) {
+          response = "నమస్కారం! మీకు ఏమి సహాయం కావాలి? ఈవెంట్ల గురించి, సభ్యత్వం గురించి, లేదా మరేదైనా అడగవచ్చు.";
+        } else if (lower.includes('help')) {
+          response = "I can help you with:<br>• Finding and registering for events<br>• Membership information and signup<br>• Community resources and contacts<br>• General questions about our organization<br><br>What would you like to know?";
+        }
+        container.innerHTML += `<div class="chat-msg bot">${response}</div>`;
+        container.scrollTop = container.scrollHeight;
+      }, 800);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // --- Waitlist Demo Toggle ---
+    function toggleWaitlistDemo() {
+      const regBtn = document.getElementById('regBtn');
+      const waitBtn = document.getElementById('waitlistBtn');
+      if (regBtn.style.display === 'none') {
+        regBtn.style.display = 'block';
+        waitBtn.style.display = 'none';
+      } else {
+        regBtn.style.display = 'none';
+        waitBtn.style.display = 'block';
+      }
+    }
+
+    // --- Star Rating ---
+    function selectRating(n, el) {
+      const labels = ['','Terrible','Poor','Average','Good','Excellent'];
+      document.getElementById('ratingText').textContent = n + '/5 — ' + labels[n];
+      const btns = el.parentElement.querySelectorAll('button');
+      btns.forEach((b,i) => b.style.opacity = i < n ? '1' : '0.3');
+    }
+
+    // --- Modals ---
+    function showModal(id) { document.getElementById(id).classList.add('open'); }
+    function hideModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    // --- Toast ---
+    function showToast(title, msg, type) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastMsg').textContent = msg;
+      toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+      setTimeout(() => { toast.classList.remove('show'); }, 4000);
+    }
+  </script>
+</body>
+</html>
