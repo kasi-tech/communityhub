@@ -47,6 +47,7 @@ describe('sendPaymentReceipt', () => {
   it('should send a receipt email with 2 line items', async () => {
     const props: PaymentReceiptProps = {
       memberName: 'Alice Tan',
+      memberId: 'MEM-00100',
       transactionId: 'TXN-20260329-001',
       date: '29 Mar 2026',
       paymentMethod: 'PayPal',
@@ -80,6 +81,7 @@ describe('sendPaymentReceipt', () => {
 
     // Verify rendered HTML contains key content
     expect(sendArgs.html).toContain('Alice Tan');
+    expect(sendArgs.html).toContain('MEM-00100');
     expect(sendArgs.html).toContain('TXN-20260329-001');
     expect(sendArgs.html).toContain('PayPal');
     expect(sendArgs.html).toContain('Annual Community Gala 2026');
@@ -98,6 +100,7 @@ describe('sendPaymentReceipt', () => {
   it('should include service charge when provided', async () => {
     const props: PaymentReceiptProps = {
       memberName: 'Bob Lee',
+      memberId: 'MEM-00200',
       transactionId: 'TXN-20260330-002',
       date: '30 Mar 2026',
       paymentMethod: 'PayNow',
@@ -125,6 +128,7 @@ describe('sendPaymentReceipt', () => {
   it('should handle a free event with $0 total', async () => {
     const props: PaymentReceiptProps = {
       memberName: 'Carol Wong',
+      memberId: 'MEM-00300',
       transactionId: 'TXN-20260401-003',
       date: '1 Apr 2026',
       paymentMethod: 'PayPal',

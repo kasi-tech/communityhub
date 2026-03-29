@@ -24,6 +24,7 @@ export interface PaymentReceiptLineItem {
 
 export interface PaymentReceiptProps {
   memberName: string;
+  memberId: string;
   transactionId: string;
   date: string;
   paymentMethod: 'PayPal' | 'PayNow';
@@ -40,6 +41,7 @@ const formatCurrency = (amount: number): string =>
 
 export const PaymentReceiptEmail = ({
   memberName = 'Member',
+  memberId = 'MEM-00000',
   transactionId = 'TXN-000000',
   date = '29 Mar 2026',
   paymentMethod = 'PayPal',
@@ -75,6 +77,10 @@ export const PaymentReceiptEmail = ({
 
           {/* Receipt Details */}
           <Section style={styles.detailsCard}>
+            <Row style={styles.detailRow}>
+              <Column style={styles.detailLabel}>Membership ID</Column>
+              <Column style={styles.detailValue}>{memberId}</Column>
+            </Row>
             <Row style={styles.detailRow}>
               <Column style={styles.detailLabel}>Transaction ID</Column>
               <Column style={styles.detailValue}>{transactionId}</Column>
@@ -180,6 +186,7 @@ export const PaymentReceiptEmail = ({
 
 PaymentReceiptEmail.PreviewProps = {
   memberName: 'Jane Doe',
+  memberId: 'MEM-00847',
   transactionId: 'TXN-20260329-001',
   date: '29 Mar 2026',
   paymentMethod: 'PayPal',
