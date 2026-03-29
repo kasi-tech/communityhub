@@ -2596,10 +2596,27 @@ Auto-approve path: PENDING ──[fraud score &lt; threshold]──→ ACTIVE</d
         <div class="form-group"><label>Price per Adult ($)</label><input type="number" placeholder="0 for free" step="0.01"></div>
       </div>
       <div class="form-group"><label>Description</label><textarea rows="3" placeholder="Event description..." style="width:100%;padding:0.65rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);"></textarea></div>
+      <!-- Image Upload -->
+      <div class="form-group">
+        <label>Event Images</label>
+        <div id="eventImageUpload" style="border:2px dashed var(--gray-300);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--gray-50);" onclick="document.getElementById('eventFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='rgba(99,102,241,0.05)'" ondragleave="this.style.borderColor='var(--gray-300)';this.style.background='var(--gray-50)'" ondrop="event.preventDefault();handleEventImages(event.dataTransfer.files);this.style.borderColor='var(--gray-300)';this.style.background='var(--gray-50)'">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">📸</div>
+          <p style="font-size:0.9rem;font-weight:600;color:var(--gray-700);">Drag & drop images here</p>
+          <p style="font-size:0.8rem;color:var(--gray-400);margin-top:0.25rem;">or click to browse files</p>
+          <p style="font-size:0.75rem;color:var(--gray-400);margin-top:0.5rem;">JPG, PNG, WebP — Max 5MB each — Up to 10 images</p>
+        </div>
+        <input type="file" id="eventFileInput" accept="image/*" multiple style="display:none;" onchange="handleEventImages(this.files)">
+        <div id="imagePreviewGrid" style="display:none;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem;margin-top:0.75rem;"></div>
+      </div>
+      <div class="form-group">
+        <label>Cover Image</label>
+        <p style="font-size:0.8rem;color:var(--gray-500);margin-bottom:0.5rem;">Select one image as the main event banner shown on cards and detail page</p>
+        <div id="coverImageSelect" style="display:none;font-size:0.85rem;color:var(--primary);font-weight:600;">First uploaded image will be used as cover. Click any thumbnail above to change.</div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="hideModal('createEventModal')">Cancel</button>
         <button class="btn btn-secondary">Save as Draft</button>
-        <button class="btn btn-primary" onclick="hideModal('createEventModal');showToast('Event Created','New event has been published')">Publish Event</button>
+        <button class="btn btn-primary" onclick="hideModal('createEventModal');showToast('Event Created','New event has been published with images')">Publish Event</button>
       </div>
     </div>
   </div>
@@ -2977,6 +2994,53 @@ Auto-approve path: PENDING ──[fraud score &lt; threshold]──→ ACTIVE</d
         container.scrollTop = container.scrollHeight;
       }, 800);
       container.scrollTop = container.scrollHeight;
+    }
+
+    // --- Event Image Upload ---
+    let eventImages = [];
+    function handleEventImages(files) {
+      const grid = document.getElementById('imagePreviewGrid');
+      const coverNote = document.getElementById('coverImageSelect');
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 5 * 1024 * 1024) { showToast('File too large', file.name + ' exceeds 5MB limit', 'error'); continue; }
+        if (eventImages.length >= 10) { showToast('Max images', 'Maximum 10 images allowed', 'error'); break; }
+        eventImages.push(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const idx = eventImages.length - 1;
+          const div = document.createElement('div');
+          div.style.cssText = 'position:relative;border-radius:var(--radius-md);overflow:hidden;aspect-ratio:1;cursor:pointer;border:2px solid ' + (idx === 0 ? 'var(--primary)' : 'var(--gray-200)');
+          div.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">
+            <button onclick="event.stopPropagation();removeEventImage(${idx},this.parentElement)" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);color:white;border:none;font-size:0.7rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">×</button>
+            ${idx === 0 ? '<span style="position:absolute;bottom:0;left:0;right:0;background:var(--primary);color:white;font-size:0.6rem;text-align:center;padding:2px;font-weight:600;">COVER</span>' : ''}`;
+          div.onclick = () => setCoverImage(idx, div);
+          grid.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+      }
+      grid.style.display = 'grid';
+      coverNote.style.display = 'block';
+      document.getElementById('eventImageUpload').querySelector('p').textContent = eventImages.length + ' image(s) selected';
+    }
+    function removeEventImage(idx, el) {
+      el.remove();
+      eventImages.splice(idx, 1);
+      if (eventImages.length === 0) {
+        document.getElementById('imagePreviewGrid').style.display = 'none';
+        document.getElementById('coverImageSelect').style.display = 'none';
+        document.getElementById('eventImageUpload').querySelector('p').textContent = 'Drag & drop images here';
+      }
+    }
+    function setCoverImage(idx, el) {
+      const grid = document.getElementById('imagePreviewGrid');
+      grid.querySelectorAll('div').forEach(d => { d.style.borderColor = 'var(--gray-200)'; const cover = d.querySelector('span'); if (cover) cover.remove(); });
+      el.style.borderColor = 'var(--primary)';
+      const span = document.createElement('span');
+      span.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:var(--primary);color:white;font-size:0.6rem;text-align:center;padding:2px;font-weight:600;';
+      span.textContent = 'COVER';
+      el.appendChild(span);
+      showToast('Cover Updated', 'Image ' + (idx + 1) + ' set as cover');
     }
 
     // --- Waitlist Demo Toggle ---
