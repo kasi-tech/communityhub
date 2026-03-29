@@ -12,6 +12,7 @@ const ADMIN_NAV: SidebarItem[] = [
   { label: "Reports", href: "/admin/reports", icon: "📈" },
   { label: "Communications", href: "/admin/communications", icon: "✉️" },
   { label: "Configuration", href: "/admin/config", icon: "⚙️" },
+  { label: "Check-in", href: "/admin/checkin", icon: "✅" },
   { label: "AI Chatbot", href: "/admin/chatbot", icon: "🤖" },
 ];
 
