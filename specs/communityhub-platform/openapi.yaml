@@ -1,0 +1,4503 @@
+openapi: 3.0.3
+info:
+  title: CommunityHub Platform API
+  version: 1.0.0
+  description: |
+    White-label community management platform API.
+    Built with Next.js App Router API routes backed by Supabase.
+
+    ## Authentication
+    All authenticated endpoints require a Bearer token in the Authorization header.
+    Tokens are issued by Supabase Auth and returned from login/verify endpoints.
+
+    ## Pagination
+    List endpoints support `page` and `limit` query parameters.
+    Responses include `total`, `page`, `limit`, and `totalPages` in a wrapper object.
+
+    ## Tenant Isolation
+    Every request is scoped to the tenant identified by the `x-tenant-id` header or
+    the domain the request originates from.
+
+    ## Error Format
+    All errors follow a consistent JSON structure with `error`, `message`, and optional `details`.
+  contact:
+    name: CommunityHub Engineering
+    email: engineering@communityhub.io
+  license:
+    name: Proprietary
+
+servers:
+  - url: /api/v1
+    description: Default — relative path for same-origin deployment
+
+tags:
+  - name: Auth
+    description: Authentication and session management (Supabase Auth wrapper)
+  - name: Members
+    description: Member profiles, event history, and payment history
+  - name: Onboarding
+    description: Multi-step application and onboarding pipeline
+  - name: Events
+    description: Event CRUD, images, registrations, and attendance
+  - name: Registrations
+    description: Event registration lifecycle and check-in
+  - name: Payments
+    description: PayPal, PayNow, and refund processing
+  - name: AI
+    description: AI-powered chatbot, recommendations, recaps, and fraud scoring
+  - name: Admin
+    description: Dashboard, application review, reports, and communications
+  - name: Config
+    description: Tenant-level configuration — branding, tiers, payments, feature flags
+  - name: Donations
+    description: Donation processing and public donor wall
+  - name: Volunteers
+    description: Volunteer registration and management
+
+# ─────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────
+paths:
+  # ── Auth ────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: authRegister
+      tags: [Auth]
+      summary: Start onboarding registration
+      description: |
+        Creates a new user account with phone and email. Sends an OTP to the
+        provided phone number for verification. The account remains unverified
+        until both phone and email are confirmed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, phone, fullName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: jane@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "S3cur3P@ss!"
+                phone:
+                  type: string
+                  pattern: '^\+[1-9]\d{6,14}$'
+                  example: "+6591234567"
+                fullName:
+                  type: string
+                  maxLength: 120
+                  example: Jane Tan
+      responses:
+        "201":
+          description: Account created — OTP sent to phone
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+                    example: OTP sent to +65******67
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email or phone already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/verify-otp:
+    post:
+      operationId: authVerifyOtp
+      tags: [Auth]
+      summary: Verify phone OTP
+      description: Validates the one-time password sent to the user's phone during registration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, otp]
+              properties:
+                phone:
+                  type: string
+                  example: "+6591234567"
+                otp:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "482910"
+      responses:
+        "200":
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified:
+                    type: boolean
+                    example: true
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/verify-email:
+    post:
+      operationId: authVerifyEmail
+      tags: [Auth]
+      summary: Verify email code
+      description: Confirms the user's email address using the verification code sent after registration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "839201"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified:
+                    type: boolean
+                    example: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/login:
+    post:
+      operationId: authLogin
+      tags: [Auth]
+      summary: Email and password login
+      description: Authenticates a user with email and password. Returns access and refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Account suspended or unverified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/magic-link:
+    post:
+      operationId: authMagicLink
+      tags: [Auth]
+      summary: Send magic link
+      description: Sends a passwordless login link to the user's email address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Magic link sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Magic link sent to j***@example.com
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      tags: [Auth]
+      summary: Log out current session
+      description: Invalidates the current access token and ends the session.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/me:
+    get:
+      operationId: authMe
+      tags: [Auth]
+      summary: Get current user profile
+      description: Returns the authenticated user's profile, membership tier, and permissions.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Members ─────────────────────────────────
+  /members:
+    get:
+      operationId: listMembers
+      tags: [Members]
+      summary: List members
+      description: |
+        Admin-only paginated member directory. Supports search by name/email
+        and filtering by membership tier, status, and join date range.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: search
+          in: query
+          description: Full-text search across name, email, phone
+          schema:
+            type: string
+        - name: tier
+          in: query
+          description: Filter by membership tier slug
+          schema:
+            type: string
+            example: premium
+        - name: status
+          in: query
+          description: Filter by member status
+          schema:
+            type: string
+            enum: [active, suspended, pending, expired]
+        - name: joinedAfter
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: joinedBefore
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, email, joinedAt, tier]
+            default: joinedAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: Paginated member list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Member"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /members/{id}:
+    get:
+      operationId: getMember
+      tags: [Members]
+      summary: Get member detail
+      description: Returns full profile for the specified member. Members can view their own profile; admins can view any member.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MemberIdParam"
+      responses:
+        "200":
+          description: Member detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateMember
+      tags: [Members]
+      summary: Update member profile
+      description: |
+        Partial update of member profile fields. Members can update their own
+        profile; admins can update any member including tier and status.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MemberIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  maxLength: 120
+                phone:
+                  type: string
+                avatarUrl:
+                  type: string
+                  format: uri
+                bio:
+                  type: string
+                  maxLength: 500
+                dateOfBirth:
+                  type: string
+                  format: date
+                address:
+                  $ref: "#/components/schemas/Address"
+                preferences:
+                  type: object
+                  properties:
+                    emailNotifications:
+                      type: boolean
+                    smsNotifications:
+                      type: boolean
+                    language:
+                      type: string
+                      example: en
+                tier:
+                  type: string
+                  description: Admin only — membership tier slug
+                status:
+                  type: string
+                  enum: [active, suspended, expired]
+                  description: Admin only
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /members/{id}/events:
+    get:
+      operationId: getMemberEvents
+      tags: [Members]
+      summary: Member's event registrations
+      description: Returns all event registrations for a member with pagination.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MemberIdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [registered, attended, cancelled, no-show]
+      responses:
+        "200":
+          description: Member's event registrations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Registration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /members/{id}/payments:
+    get:
+      operationId: getMemberPayments
+      tags: [Members]
+      summary: Member's payment history
+      description: Returns all payment records for a member with pagination and optional date range filter.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MemberIdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [membership, event, donation]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Member's payment history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Payment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Onboarding ──────────────────────────────
+  /onboarding/start:
+    post:
+      operationId: onboardingStart
+      tags: [Onboarding]
+      summary: Create application
+      description: |
+        Initiates the multi-step onboarding application for the authenticated user.
+        Returns the application object with all steps in their initial state.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tierId]
+              properties:
+                tierId:
+                  type: string
+                  description: Target membership tier slug
+                  example: standard
+                referralCode:
+                  type: string
+                  description: Optional referral code from an existing member
+                  example: REF-AB12CD
+      responses:
+        "201":
+          description: Application created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: User already has a pending or approved application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /onboarding/{id}/step:
+    patch:
+      operationId: onboardingUpdateStep
+      tags: [Onboarding]
+      summary: Update step data
+      description: |
+        Saves or updates data for a specific onboarding step. Steps can be
+        saved as draft or submitted for validation. Step data schema varies
+        per step type and is validated against the tenant's onboarding config.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stepKey, data]
+              properties:
+                stepKey:
+                  type: string
+                  description: Identifier of the onboarding step
+                  example: personal_info
+                data:
+                  type: object
+                  description: Step-specific form data (schema varies by step type)
+                  additionalProperties: true
+                isDraft:
+                  type: boolean
+                  default: false
+                  description: If true, save without validation
+      responses:
+        "200":
+          description: Step updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingStep"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /onboarding/{id}/referral:
+    post:
+      operationId: onboardingSubmitReferral
+      tags: [Onboarding]
+      summary: Submit referral
+      description: Submits referral information for the application. The referrer will be contacted for verification.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [referrerName, referrerEmail]
+              properties:
+                referrerName:
+                  type: string
+                  example: John Doe
+                referrerEmail:
+                  type: string
+                  format: email
+                  example: john.doe@example.com
+                referrerPhone:
+                  type: string
+                  example: "+6598765432"
+                referrerMemberId:
+                  type: string
+                  format: uuid
+                  description: If referrer is a known member
+                relationship:
+                  type: string
+                  maxLength: 200
+                  example: Former colleague
+      responses:
+        "200":
+          description: Referral submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  referralId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [pending, verified, rejected]
+                    example: pending
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /onboarding/{id}/status:
+    get:
+      operationId: onboardingGetStatus
+      tags: [Onboarding]
+      summary: Check application status
+      description: Returns the current status of the application including all step completion states.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      responses:
+        "200":
+          description: Application status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /onboarding/{id}/payment:
+    post:
+      operationId: onboardingProcessPayment
+      tags: [Onboarding]
+      summary: Process onboarding payment
+      description: |
+        Processes the membership fee payment as part of onboarding.
+        Supports PayPal and PayNow payment methods.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method:
+                  type: string
+                  enum: [paypal, paynow]
+                paypalOrderId:
+                  type: string
+                  description: Required when method is paypal
+                amount:
+                  type: number
+                  format: double
+                  description: Payment amount in tenant's currency
+                currency:
+                  type: string
+                  default: SGD
+                  example: SGD
+      responses:
+        "200":
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /onboarding/fraud-score/{id}:
+    get:
+      operationId: onboardingFraudScore
+      tags: [Onboarding]
+      summary: Get AI fraud score
+      description: Admin-only endpoint that returns the AI-generated fraud risk score for an onboarding application.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      responses:
+        "200":
+          description: Fraud score details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FraudScore"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Events ──────────────────────────────────
+  /events:
+    get:
+      operationId: listEvents
+      tags: [Events]
+      summary: List events
+      description: |
+        Public paginated event listing. Supports filtering by category, date range,
+        price range, and full-text search. Unauthenticated users see only published events.
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: search
+          in: query
+          description: Full-text search across title and description
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            example: networking
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: priceMin
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: priceMax
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: isFree
+          in: query
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          description: Admin only — filter by event status
+          schema:
+            type: string
+            enum: [draft, published, cancelled, archived]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [date, title, price, popularity]
+            default: date
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        "200":
+          description: Paginated event list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createEvent
+      tags: [Events]
+      summary: Create event
+      description: Admin-only. Creates a new event in draft status.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [Events]
+      summary: Get event detail
+      description: Returns full event details including images, pricing tiers, and registration counts.
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+      responses:
+        "200":
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateEvent
+      tags: [Events]
+      summary: Update event
+      description: Admin-only. Partial update of event fields.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: archiveEvent
+      tags: [Events]
+      summary: Archive event
+      description: |
+        Admin-only. Soft-deletes the event by setting its status to archived.
+        Existing registrations are preserved but the event is hidden from public listings.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+      responses:
+        "200":
+          description: Event archived
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Event archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events/{id}/images:
+    post:
+      operationId: uploadEventImages
+      tags: [Events]
+      summary: Upload event images
+      description: Admin-only. Uploads one or more images for the event via multipart form data. Images are stored in Supabase Storage.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [images]
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files (JPEG, PNG, WebP). Max 5MB each, max 10 images per upload.
+                isPrimary:
+                  type: boolean
+                  default: false
+                  description: Set the first uploaded image as the primary event image
+      responses:
+        "201":
+          description: Images uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  images:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Invalid file type or size exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events/{id}/images/{imageId}:
+    delete:
+      operationId: deleteEventImage
+      tags: [Events]
+      summary: Remove event image
+      description: Admin-only. Deletes an image from the event and removes it from storage.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Image deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Image deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events/{id}/registrations:
+    get:
+      operationId: listEventRegistrations
+      tags: [Events]
+      summary: List event registrations
+      description: Admin-only. Returns all registrations for the specified event with pagination and filtering.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [registered, attended, cancelled, no-show]
+        - name: search
+          in: query
+          description: Search by member name or email
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event registrations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Registration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events/{id}/attendance:
+    get:
+      operationId: getEventAttendance
+      tags: [Events]
+      summary: Event attendance stats
+      description: Admin-only. Returns attendance statistics for the event including check-in rate and no-show count.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EventIdParam"
+      responses:
+        "200":
+          description: Attendance statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: string
+                    format: uuid
+                  totalRegistered:
+                    type: integer
+                    example: 150
+                  totalAttended:
+                    type: integer
+                    example: 132
+                  totalCancelled:
+                    type: integer
+                    example: 8
+                  totalNoShow:
+                    type: integer
+                    example: 10
+                  checkInRate:
+                    type: number
+                    format: double
+                    description: Percentage of registered members who checked in
+                    example: 88.0
+                  checkInTimeline:
+                    type: array
+                    description: Check-in count per 15-minute window
+                    items:
+                      type: object
+                      properties:
+                        time:
+                          type: string
+                          format: date-time
+                        count:
+                          type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Registrations ───────────────────────────
+  /registrations:
+    post:
+      operationId: createRegistration
+      tags: [Registrations]
+      summary: Register for event
+      description: |
+        Registers the authenticated member for an event. If the event has a fee,
+        a pending payment is created and must be completed separately.
+        Returns the registration with QR code data for check-in.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventId]
+              properties:
+                eventId:
+                  type: string
+                  format: uuid
+                ticketTier:
+                  type: string
+                  description: Event ticket tier slug (if event has tiered pricing)
+                  example: vip
+                guestCount:
+                  type: integer
+                  minimum: 0
+                  maximum: 10
+                  default: 0
+                  description: Number of additional guests
+                dietaryRequirements:
+                  type: string
+                  maxLength: 300
+                notes:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          description: Registration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already registered or event at capacity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /registrations/{id}:
+    get:
+      operationId: getRegistration
+      tags: [Registrations]
+      summary: Get registration detail
+      description: Returns registration details including event info, payment status, and QR code.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RegistrationIdParam"
+      responses:
+        "200":
+          description: Registration detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /registrations/{id}/cancel:
+    patch:
+      operationId: cancelRegistration
+      tags: [Registrations]
+      summary: Cancel registration
+      description: |
+        Cancels an event registration. If a payment was made, a refund may be
+        automatically initiated depending on the event's cancellation policy.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RegistrationIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        "200":
+          description: Registration cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          description: Cannot cancel — event already started or policy forbids
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /registrations/{id}/checkin:
+    post:
+      operationId: checkinRegistration
+      tags: [Registrations]
+      summary: Check in at event
+      description: Admin-only. Marks a registration as checked-in at the event venue.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RegistrationIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                method:
+                  type: string
+                  enum: [qr_scan, manual]
+                  default: qr_scan
+                checkedInBy:
+                  type: string
+                  format: uuid
+                  description: Admin user who performed the check-in
+      responses:
+        "200":
+          description: Checked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          description: Already checked in or registration is cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /registrations/{id}/qr:
+    get:
+      operationId: getRegistrationQr
+      tags: [Registrations]
+      summary: Get QR code data
+      description: Returns the QR code payload for event check-in. The payload is a signed JWT containing the registration ID.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RegistrationIdParam"
+      responses:
+        "200":
+          description: QR code data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  registrationId:
+                    type: string
+                    format: uuid
+                  qrPayload:
+                    type: string
+                    description: Signed JWT payload for the QR code
+                  expiresAt:
+                    type: string
+                    format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Payments ────────────────────────────────
+  /payments/paypal/create:
+    post:
+      operationId: paypalCreateOrder
+      tags: [Payments]
+      summary: Create PayPal order
+      description: Creates a PayPal order for a given payment purpose (event registration, membership, donation).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency, purpose, referenceId]
+              properties:
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0.01
+                  example: 50.00
+                currency:
+                  type: string
+                  default: SGD
+                  example: SGD
+                purpose:
+                  type: string
+                  enum: [event, membership, donation]
+                referenceId:
+                  type: string
+                  format: uuid
+                  description: ID of the registration, application, or donation
+                description:
+                  type: string
+                  maxLength: 200
+      responses:
+        "201":
+          description: PayPal order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paypalOrderId:
+                    type: string
+                    example: 5O190127TN364715T
+                  approvalUrl:
+                    type: string
+                    format: uri
+                    description: Redirect the user here to approve the payment
+                  paymentId:
+                    type: string
+                    format: uuid
+                    description: Internal payment record ID
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /payments/paypal/capture:
+    post:
+      operationId: paypalCapturePayment
+      tags: [Payments]
+      summary: Capture PayPal payment
+      description: Captures an approved PayPal order. Called after the user approves payment on PayPal.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paypalOrderId]
+              properties:
+                paypalOrderId:
+                  type: string
+                  example: 5O190127TN364715T
+      responses:
+        "200":
+          description: Payment captured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Order not approved or already captured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /payments/paynow/create:
+    post:
+      operationId: paynowCreateQr
+      tags: [Payments]
+      summary: Create PayNow QR
+      description: Generates a PayNow QR code for payment. The user scans the QR in their banking app.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, purpose, referenceId]
+              properties:
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0.01
+                purpose:
+                  type: string
+                  enum: [event, membership, donation]
+                referenceId:
+                  type: string
+                  format: uuid
+                description:
+                  type: string
+                  maxLength: 200
+      responses:
+        "201":
+          description: PayNow QR created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentId:
+                    type: string
+                    format: uuid
+                  qrCodeDataUrl:
+                    type: string
+                    description: Base64-encoded QR code image (data URI)
+                  qrPayload:
+                    type: string
+                    description: Raw PayNow QR payload string
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  amount:
+                    type: number
+                    format: double
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /payments/paynow/verify:
+    post:
+      operationId: paynowVerifyPayment
+      tags: [Payments]
+      summary: Verify PayNow payment
+      description: |
+        Verifies a PayNow payment by checking the bank transfer reference.
+        Can be called by the user after making the transfer, or triggered by a webhook.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentId]
+              properties:
+                paymentId:
+                  type: string
+                  format: uuid
+                bankReference:
+                  type: string
+                  description: Bank transfer reference number (optional — system may auto-match)
+      responses:
+        "200":
+          description: Payment verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /payments/refund:
+    post:
+      operationId: processRefund
+      tags: [Payments]
+      summary: Process refund
+      description: Admin-only. Initiates a full or partial refund for a completed payment.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentId]
+              properties:
+                paymentId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  format: double
+                  description: Partial refund amount. Omit for full refund.
+                reason:
+                  type: string
+                  maxLength: 500
+                  example: Event cancelled by organizer
+      responses:
+        "200":
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Payment not eligible for refund
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /payments/{id}:
+    get:
+      operationId: getPayment
+      tags: [Payments]
+      summary: Get payment detail
+      description: Returns full details for a payment including gateway references and refund history.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Payment detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── AI ──────────────────────────────────────
+  /ai/chat:
+    post:
+      operationId: aiChat
+      tags: [AI]
+      summary: Chatbot message
+      description: |
+        Sends a message to the AI chatbot. The bot can answer questions about
+        the community, upcoming events, membership benefits, and more.
+        Supports conversation history for multi-turn interactions.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  maxLength: 2000
+                  example: What events are happening this weekend?
+                conversationId:
+                  type: string
+                  format: uuid
+                  description: Continue an existing conversation. Omit to start new.
+                context:
+                  type: object
+                  properties:
+                    currentPage:
+                      type: string
+                      description: Page the user is currently viewing
+                    memberId:
+                      type: string
+                      format: uuid
+      responses:
+        "200":
+          description: Bot reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai/recommend:
+    post:
+      operationId: aiRecommend
+      tags: [AI]
+      summary: Get event recommendations
+      description: |
+        Returns personalized event recommendations for a member based on their
+        attendance history, preferences, and community trends.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                memberId:
+                  type: string
+                  format: uuid
+                  description: Defaults to authenticated user if omitted
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 5
+                excludeRegistered:
+                  type: boolean
+                  default: true
+                  description: Exclude events the member is already registered for
+      responses:
+        "200":
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AIRecommendation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai/recap:
+    post:
+      operationId: aiRecap
+      tags: [AI]
+      summary: Generate event recap
+      description: Admin-only. Generates an AI-written recap/summary of a completed event for newsletters or social media.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventId]
+              properties:
+                eventId:
+                  type: string
+                  format: uuid
+                tone:
+                  type: string
+                  enum: [professional, casual, enthusiastic]
+                  default: professional
+                maxLength:
+                  type: integer
+                  minimum: 100
+                  maximum: 2000
+                  default: 500
+                includeStats:
+                  type: boolean
+                  default: true
+                  description: Include attendance and engagement statistics
+      responses:
+        "200":
+          description: Generated recap
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recap:
+                    type: string
+                  eventId:
+                    type: string
+                    format: uuid
+                  wordCount:
+                    type: integer
+                  generatedAt:
+                    type: string
+                    format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai/newsletter:
+    post:
+      operationId: aiNewsletter
+      tags: [AI]
+      summary: Generate newsletter draft
+      description: Admin-only. Generates a newsletter draft including upcoming events, community highlights, and announcements.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dateRange:
+                  type: object
+                  properties:
+                    from:
+                      type: string
+                      format: date
+                    to:
+                      type: string
+                      format: date
+                tone:
+                  type: string
+                  enum: [professional, casual, enthusiastic]
+                  default: professional
+                sections:
+                  type: array
+                  items:
+                    type: string
+                    enum: [upcoming_events, past_event_recaps, member_spotlights, announcements, donations_update]
+                  default: [upcoming_events, past_event_recaps, announcements]
+                customPrompt:
+                  type: string
+                  maxLength: 500
+                  description: Additional instructions for the AI
+      responses:
+        "200":
+          description: Newsletter draft
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subject:
+                    type: string
+                  bodyHtml:
+                    type: string
+                  bodyText:
+                    type: string
+                  generatedAt:
+                    type: string
+                    format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai/event-copilot:
+    post:
+      operationId: aiEventCopilot
+      tags: [AI]
+      summary: Generate event listing from description
+      description: |
+        Admin-only. Takes a free-text event description and generates a structured
+        event listing with title, description, category, pricing suggestions, and
+        recommended date/time slots.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description]
+              properties:
+                description:
+                  type: string
+                  maxLength: 3000
+                  example: "We want to do a casual networking dinner for 30 people at a nice restaurant in Clarke Quay, budget around $80 per person"
+                preferredDates:
+                  type: array
+                  items:
+                    type: string
+                    format: date
+                  description: Optional preferred date range
+      responses:
+        "200":
+          description: Generated event listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestedEvent:
+                    $ref: "#/components/schemas/EventInput"
+                  alternativeTitles:
+                    type: array
+                    items:
+                      type: string
+                  pricingSuggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tier:
+                          type: string
+                        price:
+                          type: number
+                          format: double
+                        description:
+                          type: string
+                  recommendedSlots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        time:
+                          type: string
+                          example: "19:00"
+                        reasoning:
+                          type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai/fraud-score/{applicationId}:
+    get:
+      operationId: aiFraudScoreDetail
+      tags: [AI]
+      summary: Fraud score detail
+      description: Admin-only. Returns the detailed AI fraud risk analysis for an onboarding application.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Fraud score detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FraudScore"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Admin ───────────────────────────────────
+  /admin/dashboard:
+    get:
+      operationId: adminDashboard
+      tags: [Admin]
+      summary: Dashboard stats
+      description: Returns aggregate statistics for the admin dashboard including member counts, revenue, upcoming events, and pending applications.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: Time period for stats aggregation
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y, all]
+            default: 30d
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      active:
+                        type: integer
+                      newThisPeriod:
+                        type: integer
+                      churnRate:
+                        type: number
+                        format: double
+                        description: Percentage
+                  revenue:
+                    type: object
+                    properties:
+                      totalThisPeriod:
+                        type: number
+                        format: double
+                      membershipRevenue:
+                        type: number
+                        format: double
+                      eventRevenue:
+                        type: number
+                        format: double
+                      donationRevenue:
+                        type: number
+                        format: double
+                      currency:
+                        type: string
+                        example: SGD
+                  events:
+                    type: object
+                    properties:
+                      upcoming:
+                        type: integer
+                      totalThisPeriod:
+                        type: integer
+                      avgAttendanceRate:
+                        type: number
+                        format: double
+                  applications:
+                    type: object
+                    properties:
+                      pending:
+                        type: integer
+                      approvedThisPeriod:
+                        type: integer
+                      rejectedThisPeriod:
+                        type: integer
+                      avgProcessingDays:
+                        type: number
+                        format: double
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/applications:
+    get:
+      operationId: adminListApplications
+      tags: [Admin]
+      summary: Pending applications
+      description: Returns pending onboarding applications with their AI fraud scores for admin review.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, under_review, approved, rejected]
+            default: pending
+        - name: fraudRisk
+          in: query
+          description: Filter by fraud risk level
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [submittedAt, fraudScore, applicantName]
+            default: submittedAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: Applications list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: "#/components/schemas/Application"
+                            - type: object
+                              properties:
+                                fraudScore:
+                                  $ref: "#/components/schemas/FraudScore"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/applications/{id}/approve:
+    post:
+      operationId: adminApproveApplication
+      tags: [Admin]
+      summary: Approve application
+      description: Approves a pending application. The applicant becomes an active member and receives a welcome email.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+                  maxLength: 500
+                  description: Internal admin note
+                overrideTier:
+                  type: string
+                  description: Override the tier the applicant selected
+      responses:
+        "200":
+          description: Application approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          description: Application is not in a reviewable state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/applications/{id}/reject:
+    post:
+      operationId: adminRejectApplication
+      tags: [Admin]
+      summary: Reject application
+      description: Rejects a pending application. The applicant receives a rejection notification.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  maxLength: 1000
+                  example: Application does not meet membership criteria
+                allowReapply:
+                  type: boolean
+                  default: true
+                  description: Whether the applicant can submit a new application
+      responses:
+        "200":
+          description: Application rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          description: Application is not in a reviewable state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/reports/revenue:
+    get:
+      operationId: adminRevenueReport
+      tags: [Admin]
+      summary: Financial reports
+      description: Returns revenue breakdown by source, time period, and membership tier.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [membership, event, donation, all]
+            default: all
+      responses:
+        "200":
+          description: Revenue report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from:
+                    type: string
+                    format: date
+                  to:
+                    type: string
+                    format: date
+                  currency:
+                    type: string
+                    example: SGD
+                  totalRevenue:
+                    type: number
+                    format: double
+                  totalRefunds:
+                    type: number
+                    format: double
+                  netRevenue:
+                    type: number
+                    format: double
+                  bySource:
+                    type: object
+                    properties:
+                      membership:
+                        type: number
+                        format: double
+                      event:
+                        type: number
+                        format: double
+                      donation:
+                        type: number
+                        format: double
+                  timeSeries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        period:
+                          type: string
+                          example: "2026-03"
+                        revenue:
+                          type: number
+                          format: double
+                        refunds:
+                          type: number
+                          format: double
+                        net:
+                          type: number
+                          format: double
+                  byTier:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tier:
+                          type: string
+                        memberCount:
+                          type: integer
+                        revenue:
+                          type: number
+                          format: double
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/communications/send:
+    post:
+      operationId: adminSendCommunication
+      tags: [Admin]
+      summary: Send bulk message
+      description: |
+        Sends a bulk email or SMS to a filtered set of members. Supports
+        template variables and scheduling for future delivery.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, subject, body, recipients]
+              properties:
+                channel:
+                  type: string
+                  enum: [email, sms, both]
+                subject:
+                  type: string
+                  maxLength: 200
+                  description: Email subject line (ignored for SMS-only)
+                body:
+                  type: string
+                  maxLength: 10000
+                  description: Message body. Supports HTML for email. Use {{name}} for personalization.
+                recipients:
+                  type: object
+                  description: Recipient filter criteria
+                  properties:
+                    all:
+                      type: boolean
+                      default: false
+                    tiers:
+                      type: array
+                      items:
+                        type: string
+                    statuses:
+                      type: array
+                      items:
+                        type: string
+                        enum: [active, suspended, expired]
+                    memberIds:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                      description: Explicit list of member IDs
+                scheduledAt:
+                  type: string
+                  format: date-time
+                  description: Schedule for future delivery. Omit for immediate send.
+      responses:
+        "200":
+          description: Communication queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  communicationId:
+                    type: string
+                    format: uuid
+                  recipientCount:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [queued, scheduled, sending]
+                  scheduledAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/audit-log:
+    get:
+      operationId: adminAuditLog
+      tags: [Admin]
+      summary: Audit trail
+      description: Returns a paginated audit log of all admin and system actions.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: action
+          in: query
+          description: Filter by action type
+          schema:
+            type: string
+            example: application.approved
+        - name: actorId
+          in: query
+          description: Filter by the user who performed the action
+          schema:
+            type: string
+            format: uuid
+        - name: resourceType
+          in: query
+          schema:
+            type: string
+            enum: [member, application, event, payment, config, communication]
+        - name: resourceId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            action:
+                              type: string
+                              example: application.approved
+                            actorId:
+                              type: string
+                              format: uuid
+                            actorEmail:
+                              type: string
+                              format: email
+                            resourceType:
+                              type: string
+                            resourceId:
+                              type: string
+                              format: uuid
+                            metadata:
+                              type: object
+                              additionalProperties: true
+                            ipAddress:
+                              type: string
+                            userAgent:
+                              type: string
+                            createdAt:
+                              type: string
+                              format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Config (Tenant) ─────────────────────────
+  /config:
+    get:
+      operationId: getConfig
+      tags: [Config]
+      summary: Get tenant configuration
+      description: Returns the full tenant configuration including branding, tiers, payment settings, and feature flags.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Tenant configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/branding:
+    patch:
+      operationId: updateBranding
+      tags: [Config]
+      summary: Update branding
+      description: Admin-only. Updates the tenant's branding configuration including logos, colors, and display name.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                communityName:
+                  type: string
+                  maxLength: 100
+                tagline:
+                  type: string
+                  maxLength: 200
+                logoUrl:
+                  type: string
+                  format: uri
+                faviconUrl:
+                  type: string
+                  format: uri
+                primaryColor:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                  example: "#1a56db"
+                secondaryColor:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                  example: "#7c3aed"
+                accentColor:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                customCss:
+                  type: string
+                  maxLength: 10000
+                  description: Custom CSS overrides
+      responses:
+        "200":
+          description: Branding updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/tiers:
+    patch:
+      operationId: updateTiers
+      tags: [Config]
+      summary: Update membership tiers
+      description: Admin-only. Updates the tenant's membership tier definitions including pricing, benefits, and limits.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tiers]
+              properties:
+                tiers:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/MembershipTier"
+      responses:
+        "200":
+          description: Tiers updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/payments:
+    patch:
+      operationId: updatePaymentConfig
+      tags: [Config]
+      summary: Update payment config
+      description: Admin-only. Updates payment gateway credentials and configuration.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currency:
+                  type: string
+                  example: SGD
+                paypal:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    clientId:
+                      type: string
+                    sandbox:
+                      type: boolean
+                paynow:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    uen:
+                      type: string
+                      description: Unique Entity Number for PayNow
+                    accountName:
+                      type: string
+                taxRate:
+                  type: number
+                  format: double
+                  description: Tax rate as decimal (e.g., 0.09 for 9% GST)
+                refundPolicy:
+                  type: object
+                  properties:
+                    autoRefundOnCancellation:
+                      type: boolean
+                    refundWindowHours:
+                      type: integer
+                      description: Hours before event start that refunds are allowed
+      responses:
+        "200":
+          description: Payment config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/onboarding:
+    patch:
+      operationId: updateOnboardingConfig
+      tags: [Config]
+      summary: Update onboarding pipeline
+      description: Admin-only. Configures the onboarding steps, required fields, and approval workflow.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        example: personal_info
+                      label:
+                        type: string
+                        example: Personal Information
+                      order:
+                        type: integer
+                      required:
+                        type: boolean
+                      fields:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            type:
+                              type: string
+                              enum: [text, email, phone, select, textarea, file, date, checkbox]
+                            required:
+                              type: boolean
+                            options:
+                              type: array
+                              items:
+                                type: string
+                requireReferral:
+                  type: boolean
+                requirePayment:
+                  type: boolean
+                autoApprove:
+                  type: boolean
+                  description: Automatically approve applications with low fraud score
+                autoApproveThreshold:
+                  type: number
+                  format: double
+                  description: Fraud score threshold for auto-approval (0.0-1.0)
+      responses:
+        "200":
+          description: Onboarding config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/features:
+    patch:
+      operationId: updateFeatureFlags
+      tags: [Config]
+      summary: Update feature flags
+      description: Admin-only. Toggles platform feature flags for the tenant.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlags"
+      responses:
+        "200":
+          description: Feature flags updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/emails:
+    patch:
+      operationId: updateEmailTemplates
+      tags: [Config]
+      summary: Update email templates
+      description: Admin-only. Customizes transactional email templates for the tenant.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                templates:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      subject:
+                        type: string
+                      bodyHtml:
+                        type: string
+                      bodyText:
+                        type: string
+                      enabled:
+                        type: boolean
+                  description: |
+                    Map of template keys to template content.
+                    Keys: welcome, application_approved, application_rejected,
+                    event_registration, event_reminder, payment_receipt,
+                    password_reset, magic_link
+                  example:
+                    welcome:
+                      subject: "Welcome to {{communityName}}, {{name}}!"
+                      bodyHtml: "<h1>Welcome!</h1><p>Hi {{name}},...</p>"
+                      bodyText: "Welcome! Hi {{name}},..."
+                      enabled: true
+                senderName:
+                  type: string
+                  example: CommunityHub
+                replyToEmail:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Email templates updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/language:
+    patch:
+      operationId: updateLanguageConfig
+      tags: [Config]
+      summary: Update language config
+      description: Admin-only. Configures the default language and available translations for the tenant.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                defaultLanguage:
+                  type: string
+                  example: en
+                availableLanguages:
+                  type: array
+                  items:
+                    type: string
+                  example: [en, zh, ms, ta]
+                translations:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  description: "Map of language code to key-value translation pairs"
+      responses:
+        "200":
+          description: Language config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Donations ───────────────────────────────
+  /donations:
+    post:
+      operationId: createDonation
+      tags: [Donations]
+      summary: Make a donation
+      description: Creates a donation record. Payment is processed through the specified gateway. Supports anonymous donations.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, paymentMethod]
+              properties:
+                amount:
+                  type: number
+                  format: double
+                  minimum: 1.00
+                  example: 100.00
+                currency:
+                  type: string
+                  default: SGD
+                paymentMethod:
+                  type: string
+                  enum: [paypal, paynow]
+                paypalOrderId:
+                  type: string
+                  description: Required when paymentMethod is paypal
+                isAnonymous:
+                  type: boolean
+                  default: false
+                displayName:
+                  type: string
+                  maxLength: 100
+                  description: Name to show on the donor wall (defaults to member name)
+                message:
+                  type: string
+                  maxLength: 500
+                  description: Optional public message
+                campaignId:
+                  type: string
+                  format: uuid
+                  description: Optional donation campaign to attribute to
+      responses:
+        "201":
+          description: Donation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      operationId: listDonations
+      tags: [Donations]
+      summary: List donations
+      description: Admin-only. Returns all donations with pagination and filtering.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: minAmount
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: maxAmount
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Donations list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Donation"
+                      summary:
+                        type: object
+                        properties:
+                          totalAmount:
+                            type: number
+                            format: double
+                          donorCount:
+                            type: integer
+                          currency:
+                            type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /donations/wall:
+    get:
+      operationId: getDonorWall
+      tags: [Donations]
+      summary: Public donor wall
+      description: Returns the public donor wall showing recent and top donors. Anonymous donations show as "Anonymous".
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, amount]
+            default: recent
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Donor wall
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  donors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        displayName:
+                          type: string
+                          example: Jane T.
+                        amount:
+                          type: number
+                          format: double
+                        message:
+                          type: string
+                        donatedAt:
+                          type: string
+                          format: date-time
+                        isAnonymous:
+                          type: boolean
+                  totalRaised:
+                    type: number
+                    format: double
+                  donorCount:
+                    type: integer
+                  currency:
+                    type: string
+                    example: SGD
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Volunteers ──────────────────────────────
+  /volunteers:
+    post:
+      operationId: createVolunteer
+      tags: [Volunteers]
+      summary: Register as volunteer
+      description: Registers the authenticated member as a volunteer with their availability and skill preferences.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [skills]
+              properties:
+                skills:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  example: [photography, event_setup, registration_desk]
+                availability:
+                  type: object
+                  properties:
+                    weekdays:
+                      type: boolean
+                      default: false
+                    weekends:
+                      type: boolean
+                      default: true
+                    evenings:
+                      type: boolean
+                      default: true
+                    notes:
+                      type: string
+                      maxLength: 300
+                preferredEventTypes:
+                  type: array
+                  items:
+                    type: string
+                  example: [networking, workshop]
+                bio:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          description: Volunteer registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Volunteer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Already registered as volunteer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      operationId: listVolunteers
+      tags: [Volunteers]
+      summary: List volunteers
+      description: Admin-only. Returns all registered volunteers with their skills and availability.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: skill
+          in: query
+          description: Filter by skill
+          schema:
+            type: string
+        - name: available
+          in: query
+          description: Filter by current availability
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search by name or email
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Volunteers list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Volunteer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+# ─────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT token
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    MemberIdParam:
+      name: id
+      in: path
+      required: true
+      description: Member UUID
+      schema:
+        type: string
+        format: uuid
+    EventIdParam:
+      name: id
+      in: path
+      required: true
+      description: Event UUID
+      schema:
+        type: string
+        format: uuid
+    ApplicationIdParam:
+      name: id
+      in: path
+      required: true
+      description: Application UUID
+      schema:
+        type: string
+        format: uuid
+    RegistrationIdParam:
+      name: id
+      in: path
+      required: true
+      description: Registration UUID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request — malformed JSON or missing required fields
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication required — missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: UNAUTHORIZED
+            message: Authentication required
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: FORBIDDEN
+            message: You do not have permission to perform this action
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: NOT_FOUND
+            message: The requested resource was not found
+    ValidationError:
+      description: Validation error — one or more fields failed validation
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorResponse"
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          example: email
+                        message:
+                          type: string
+                          example: Must be a valid email address
+                        code:
+                          type: string
+                          example: invalid_format
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: INTERNAL_ERROR
+            message: An unexpected error occurred. Please try again later.
+            requestId: req_abc123
+
+  schemas:
+    # ── Core Entities ─────────────────────────
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        fullName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        address:
+          $ref: "#/components/schemas/Address"
+        tier:
+          $ref: "#/components/schemas/MembershipTier"
+        status:
+          type: string
+          enum: [active, suspended, pending, expired]
+        role:
+          type: string
+          enum: [member, admin, super_admin]
+        preferences:
+          type: object
+          properties:
+            emailNotifications:
+              type: boolean
+            smsNotifications:
+              type: boolean
+            language:
+              type: string
+        emailVerified:
+          type: boolean
+        phoneVerified:
+          type: boolean
+        joinedAt:
+          type: string
+          format: date-time
+        lastActiveAt:
+          type: string
+          format: date-time
+          nullable: true
+        membershipExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Address:
+      type: object
+      properties:
+        line1:
+          type: string
+        line2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        state:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+        country:
+          type: string
+          example: SG
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        descriptionHtml:
+          type: string
+          description: Rich-text description rendered as HTML
+        category:
+          type: string
+          example: networking
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, published, cancelled, archived]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          example: Asia/Singapore
+        location:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [physical, virtual, hybrid]
+            venueName:
+              type: string
+              nullable: true
+            address:
+              type: string
+              nullable: true
+            city:
+              type: string
+              nullable: true
+            coordinates:
+              type: object
+              nullable: true
+              properties:
+                lat:
+                  type: number
+                  format: double
+                lng:
+                  type: number
+                  format: double
+            virtualLink:
+              type: string
+              format: uri
+              nullable: true
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventImage"
+        pricing:
+          type: object
+          properties:
+            isFree:
+              type: boolean
+            currency:
+              type: string
+              example: SGD
+            tiers:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: Standard
+                  slug:
+                    type: string
+                    example: standard
+                  price:
+                    type: number
+                    format: double
+                  capacity:
+                    type: integer
+                    nullable: true
+                  description:
+                    type: string
+                    nullable: true
+        capacity:
+          type: integer
+          nullable: true
+          description: Total event capacity (null = unlimited)
+        registrationCount:
+          type: integer
+        registrationDeadline:
+          type: string
+          format: date-time
+          nullable: true
+        cancellationPolicy:
+          type: string
+          nullable: true
+        organizer:
+          type: object
+          properties:
+            memberId:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EventInput:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        descriptionHtml:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, published, cancelled]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          example: Asia/Singapore
+        location:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [physical, virtual, hybrid]
+            venueName:
+              type: string
+            address:
+              type: string
+            city:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                lat:
+                  type: number
+                  format: double
+                lng:
+                  type: number
+                  format: double
+            virtualLink:
+              type: string
+              format: uri
+        pricing:
+          type: object
+          properties:
+            isFree:
+              type: boolean
+            currency:
+              type: string
+            tiers:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  price:
+                    type: number
+                    format: double
+                  capacity:
+                    type: integer
+                    nullable: true
+                  description:
+                    type: string
+        capacity:
+          type: integer
+          nullable: true
+        registrationDeadline:
+          type: string
+          format: date-time
+          nullable: true
+        cancellationPolicy:
+          type: string
+
+    EventImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+        altText:
+          type: string
+          nullable: true
+        isPrimary:
+          type: boolean
+        width:
+          type: integer
+        height:
+          type: integer
+        sizeBytes:
+          type: integer
+        uploadedAt:
+          type: string
+          format: date-time
+
+    Registration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        memberEmail:
+          type: string
+          format: email
+        event:
+          $ref: "#/components/schemas/Event"
+        ticketTier:
+          type: string
+          nullable: true
+        guestCount:
+          type: integer
+        dietaryRequirements:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [registered, attended, cancelled, no-show]
+        paymentId:
+          type: string
+          format: uuid
+          nullable: true
+        paymentStatus:
+          type: string
+          enum: [pending, completed, refunded, not_required]
+        checkedInAt:
+          type: string
+          format: date-time
+          nullable: true
+        checkedInBy:
+          type: string
+          format: uuid
+          nullable: true
+        checkinMethod:
+          type: string
+          enum: [qr_scan, manual]
+          nullable: true
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancellationReason:
+          type: string
+          nullable: true
+        qrPayload:
+          type: string
+          description: Signed JWT for QR code check-in
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: SGD
+        method:
+          type: string
+          enum: [paypal, paynow]
+        purpose:
+          type: string
+          enum: [event, membership, donation]
+        referenceId:
+          type: string
+          format: uuid
+          description: ID of the related registration, application, or donation
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded, partially_refunded]
+        gatewayTransactionId:
+          type: string
+          nullable: true
+          description: PayPal order ID or PayNow reference
+        gatewayResponse:
+          type: object
+          nullable: true
+          description: Raw gateway response metadata
+        refundAmount:
+          type: number
+          format: double
+          nullable: true
+        refundReason:
+          type: string
+          nullable: true
+        refundedAt:
+          type: string
+          format: date-time
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        applicantName:
+          type: string
+        applicantEmail:
+          type: string
+          format: email
+        tierId:
+          type: string
+        status:
+          type: string
+          enum: [draft, pending, under_review, approved, rejected]
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingStep"
+        referral:
+          type: object
+          nullable: true
+          properties:
+            referrerName:
+              type: string
+            referrerEmail:
+              type: string
+              format: email
+            referrerMemberId:
+              type: string
+              format: uuid
+              nullable: true
+            relationship:
+              type: string
+            status:
+              type: string
+              enum: [pending, verified, rejected]
+        paymentId:
+          type: string
+          format: uuid
+          nullable: true
+        paymentStatus:
+          type: string
+          enum: [pending, completed, not_required]
+        fraudScore:
+          $ref: "#/components/schemas/FraudScore"
+        reviewedBy:
+          type: string
+          format: uuid
+          nullable: true
+        reviewNote:
+          type: string
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OnboardingStep:
+      type: object
+      properties:
+        key:
+          type: string
+          example: personal_info
+        label:
+          type: string
+          example: Personal Information
+        order:
+          type: integer
+        status:
+          type: string
+          enum: [not_started, in_progress, completed, skipped]
+        data:
+          type: object
+          additionalProperties: true
+          description: Step-specific form data
+        validationErrors:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    FraudScore:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        overallScore:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: "0.0 = no risk, 1.0 = highest risk"
+          example: 0.15
+        riskLevel:
+          type: string
+          enum: [low, medium, high]
+        signals:
+          type: array
+          items:
+            type: object
+            properties:
+              signal:
+                type: string
+                example: disposable_email
+              description:
+                type: string
+                example: Email domain is a known disposable email provider
+              weight:
+                type: number
+                format: double
+                example: 0.3
+              detected:
+                type: boolean
+        recommendation:
+          type: string
+          enum: [auto_approve, manual_review, auto_reject]
+        explanation:
+          type: string
+          description: Human-readable summary of the fraud analysis
+        analyzedAt:
+          type: string
+          format: date-time
+        modelVersion:
+          type: string
+          example: "1.2.0"
+
+    Donation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        displayName:
+          type: string
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: SGD
+        paymentMethod:
+          type: string
+          enum: [paypal, paynow]
+        paymentId:
+          type: string
+          format: uuid
+        paymentStatus:
+          type: string
+          enum: [pending, completed, failed, refunded]
+        isAnonymous:
+          type: boolean
+        message:
+          type: string
+          nullable: true
+        campaignId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Volunteer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        memberEmail:
+          type: string
+          format: email
+        skills:
+          type: array
+          items:
+            type: string
+        availability:
+          type: object
+          properties:
+            weekdays:
+              type: boolean
+            weekends:
+              type: boolean
+            evenings:
+              type: boolean
+            notes:
+              type: string
+              nullable: true
+        preferredEventTypes:
+          type: array
+          items:
+            type: string
+        bio:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        eventsVolunteered:
+          type: integer
+          description: Total number of events volunteered at
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ── Config Schemas ────────────────────────
+    TenantConfig:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        branding:
+          type: object
+          properties:
+            communityName:
+              type: string
+            tagline:
+              type: string
+            logoUrl:
+              type: string
+              format: uri
+            faviconUrl:
+              type: string
+              format: uri
+            primaryColor:
+              type: string
+            secondaryColor:
+              type: string
+            accentColor:
+              type: string
+            customCss:
+              type: string
+              nullable: true
+        tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/MembershipTier"
+        payments:
+          type: object
+          properties:
+            currency:
+              type: string
+            paypal:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                sandbox:
+                  type: boolean
+            paynow:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                uen:
+                  type: string
+                accountName:
+                  type: string
+            taxRate:
+              type: number
+              format: double
+            refundPolicy:
+              type: object
+              properties:
+                autoRefundOnCancellation:
+                  type: boolean
+                refundWindowHours:
+                  type: integer
+        onboarding:
+          type: object
+          properties:
+            steps:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  label:
+                    type: string
+                  order:
+                    type: integer
+                  required:
+                    type: boolean
+                  fields:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+            requireReferral:
+              type: boolean
+            requirePayment:
+              type: boolean
+            autoApprove:
+              type: boolean
+            autoApproveThreshold:
+              type: number
+              format: double
+        features:
+          $ref: "#/components/schemas/FeatureFlags"
+        emails:
+          type: object
+          properties:
+            senderName:
+              type: string
+            replyToEmail:
+              type: string
+              format: email
+            templates:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  subject:
+                    type: string
+                  bodyHtml:
+                    type: string
+                  bodyText:
+                    type: string
+                  enabled:
+                    type: boolean
+        language:
+          type: object
+          properties:
+            defaultLanguage:
+              type: string
+            availableLanguages:
+              type: array
+              items:
+                type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    MembershipTier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          example: premium
+        name:
+          type: string
+          example: Premium
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+          example: 120.00
+        currency:
+          type: string
+          example: SGD
+        billingPeriod:
+          type: string
+          enum: [monthly, quarterly, annual, lifetime, free]
+        benefits:
+          type: array
+          items:
+            type: string
+          example:
+            - Priority event registration
+            - Exclusive networking events
+            - 10% discount on paid events
+        maxMembers:
+          type: integer
+          nullable: true
+          description: Maximum members allowed in this tier (null = unlimited)
+        isDefault:
+          type: boolean
+          description: Whether this is the default tier for new members
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+
+    FeatureFlags:
+      type: object
+      properties:
+        ff_donations_enabled:
+          type: boolean
+          default: true
+        ff_volunteers_enabled:
+          type: boolean
+          default: true
+        ff_ai_chatbot_enabled:
+          type: boolean
+          default: true
+        ff_ai_recommendations_enabled:
+          type: boolean
+          default: true
+        ff_ai_event_copilot_enabled:
+          type: boolean
+          default: false
+        ff_paynow_enabled:
+          type: boolean
+          default: true
+        ff_paypal_enabled:
+          type: boolean
+          default: true
+        ff_magic_link_login:
+          type: boolean
+          default: true
+        ff_donor_wall_enabled:
+          type: boolean
+          default: true
+        ff_event_qr_checkin:
+          type: boolean
+          default: true
+        ff_fraud_scoring_enabled:
+          type: boolean
+          default: true
+        ff_newsletter_ai:
+          type: boolean
+          default: false
+        ff_multi_language:
+          type: boolean
+          default: false
+
+    # ── AI Schemas ────────────────────────────
+    ChatMessage:
+      type: object
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        suggestions:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Follow-up suggestion prompts
+        relatedEvents:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              eventId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              date:
+                type: string
+                format: date-time
+          description: Events referenced in the response
+        createdAt:
+          type: string
+          format: date-time
+
+    AIRecommendation:
+      type: object
+      properties:
+        event:
+          $ref: "#/components/schemas/Event"
+        score:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Relevance score (1.0 = perfect match)
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Why this event was recommended
+          example:
+            - Matches your interest in networking events
+            - Similar to "Tech Meetup" you attended last month
+            - Popular among members in your tier
+
+    # ── Common Schemas ────────────────────────
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Token TTL in seconds
+          example: 3600
+        tokenType:
+          type: string
+          example: Bearer
+        user:
+          $ref: "#/components/schemas/Member"
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        total:
+          type: integer
+          description: Total number of records matching the query
+          example: 142
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          description: Items per page
+          example: 20
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 8
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Human-readable error message
+          example: One or more fields failed validation
+        details:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+              code:
+                type: string
+          description: Field-level validation errors
+        requestId:
+          type: string
+          description: Request ID for support/debugging
+          example: req_abc123def456
