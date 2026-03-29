@@ -9,8 +9,8 @@ test.describe('CommunityHub Prototype — Navigation & Core Pages', () => {
 
   test('Homepage loads with hero, events, and stats', async ({ page }) => {
     // Hero section visible
-    await expect(page.locator('.hero h1')).toBeVisible();
-    await expect(page.locator('.hero h1')).toContainText('Connected');
+    await expect(page.locator('#page-home .hero h1')).toBeVisible();
+    await expect(page.locator('#page-home .hero h1')).toContainText('Connected');
 
     // Upcoming events section
     await expect(page.locator('.section-header h2').first()).toContainText('Upcoming Events');
@@ -238,7 +238,7 @@ test.describe('Onboarding Flow — Multi-Step Wizard', () => {
     }
 
     // Tier cards visible
-    const tiers = page.locator('.tier-card');
+    const tiers = page.locator('.step-content[data-step="4"] .tier-card');
     await expect(tiers).toHaveCount(4);
 
     // Select a tier
@@ -246,7 +246,7 @@ test.describe('Onboarding Flow — Multi-Step Wizard', () => {
     await expect(tiers.nth(1)).toHaveClass(/selected/);
 
     // Popular badge visible
-    await expect(page.locator('.tier-popular')).toContainText('Most Popular');
+    await expect(page.locator('.step-content[data-step="4"] .tier-popular')).toContainText('Most Popular');
   });
 
   test('Step 5: Referral lookup works', async ({ page }) => {
