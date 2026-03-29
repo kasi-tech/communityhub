@@ -1,0 +1,1364 @@
+[
+  {
+    "id": "GD-ONB-001",
+    "module": "member-onboarding",
+    "scenario": "Happy path: valid member registration with all verifications passing",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ONB-001", "REQ-ONB-002", "REQ-ONB-003", "REQ-ONB-010", "REQ-PAY-001"],
+    "input": {
+      "step": "full_registration_flow",
+      "phone": "+1-555-0142",
+      "phone_otp": "483927",
+      "otp_verified": true,
+      "email": "priya.sharma@gmail.com",
+      "email_verified": true,
+      "first_name": "Priya",
+      "last_name": "Sharma",
+      "date_of_birth": "1988-03-15",
+      "address": {
+        "line1": "1234 Oak Valley Dr",
+        "city": "Frisco",
+        "state": "TX",
+        "zip": "75034",
+        "country": "US"
+      },
+      "referral_code": "REF-MBR-00412",
+      "referral_valid": true,
+      "membership_tier": "individual",
+      "payment_method": "paypal",
+      "payment_amount": 150.00,
+      "payment_currency": "USD",
+      "payment_status": "completed",
+      "ip_address": "72.134.29.101",
+      "form_completion_time_seconds": 340,
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    },
+    "expected_output": {
+      "fraud_score": 8,
+      "fraud_flags": [],
+      "phone_type": "mobile",
+      "email_domain_disposable": false,
+      "duplicate_detected": false,
+      "rate_limit_exceeded": false,
+      "referral_status": "valid",
+      "application_status": "approved",
+      "auto_approved": true,
+      "member_id_generated": true,
+      "member_id_pattern": "^MBR-[A-Z0-9]{8}$",
+      "welcome_email_sent": true,
+      "welcome_sms_sent": true,
+      "membership_start_date": "2026-03-29",
+      "membership_expiry_date": "2027-03-29",
+      "payment_receipt_sent": true
+    }
+  },
+  {
+    "id": "GD-ONB-002",
+    "module": "member-onboarding",
+    "scenario": "Fraud detection: disposable email, VoIP phone, no referral, suspiciously fast form completion",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ONB-004", "REQ-ONB-005", "REQ-ONB-006", "REQ-FRD-001", "REQ-FRD-002"],
+    "input": {
+      "step": "full_registration_flow",
+      "phone": "+1-555-0199",
+      "phone_otp": "291048",
+      "otp_verified": true,
+      "email": "randomuser8832@tempmail.xyz",
+      "email_verified": true,
+      "first_name": "John",
+      "last_name": "Smith",
+      "date_of_birth": "1990-01-01",
+      "address": {
+        "line1": "999 Fake Blvd",
+        "city": "Dallas",
+        "state": "TX",
+        "zip": "75201",
+        "country": "US"
+      },
+      "referral_code": null,
+      "referral_valid": false,
+      "membership_tier": "individual",
+      "payment_method": "paypal",
+      "payment_amount": 150.00,
+      "payment_currency": "USD",
+      "payment_status": "completed",
+      "ip_address": "198.51.100.47",
+      "form_completion_time_seconds": 18,
+      "user_agent": "Mozilla/5.0 (Linux; Android 11; Pixel 4)"
+    },
+    "expected_output": {
+      "fraud_score": 82,
+      "fraud_flags": [
+        "disposable_email_domain",
+        "voip_phone_number",
+        "no_referral_code",
+        "form_completed_under_30_seconds"
+      ],
+      "phone_type": "voip",
+      "email_domain_disposable": true,
+      "duplicate_detected": false,
+      "rate_limit_exceeded": false,
+      "referral_status": "missing",
+      "application_status": "flagged_for_review",
+      "auto_approved": false,
+      "member_id_generated": false,
+      "welcome_email_sent": false,
+      "welcome_sms_sent": false,
+      "admin_notification_sent": true,
+      "admin_notification_type": "high_fraud_score_alert",
+      "review_queue_position": 1
+    }
+  },
+  {
+    "id": "GD-ONB-003",
+    "module": "member-onboarding",
+    "scenario": "Duplicate detection: same name, DOB, and phone as existing member",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ONB-007", "REQ-FRD-003"],
+    "input": {
+      "step": "full_registration_flow",
+      "phone": "+1-555-0142",
+      "phone_otp": "738192",
+      "otp_verified": true,
+      "email": "priya.sharma.new@yahoo.com",
+      "email_verified": true,
+      "first_name": "Priya",
+      "last_name": "Sharma",
+      "date_of_birth": "1988-03-15",
+      "address": {
+        "line1": "5678 Elm St",
+        "city": "Plano",
+        "state": "TX",
+        "zip": "75024",
+        "country": "US"
+      },
+      "referral_code": "REF-MBR-00500",
+      "referral_valid": true,
+      "membership_tier": "individual",
+      "existing_member_match": {
+        "member_id": "MBR-A1B2C3D4",
+        "match_fields": ["first_name", "last_name", "date_of_birth", "phone"]
+      },
+      "ip_address": "72.134.29.200",
+      "form_completion_time_seconds": 220
+    },
+    "expected_output": {
+      "fraud_score": 95,
+      "fraud_flags": [
+        "duplicate_member_detected"
+      ],
+      "duplicate_detected": true,
+      "duplicate_match_member_id": "MBR-A1B2C3D4",
+      "duplicate_match_confidence": "high",
+      "application_status": "blocked",
+      "auto_approved": false,
+      "member_id_generated": false,
+      "welcome_email_sent": false,
+      "block_reason": "Duplicate registration detected. A member with matching name, date of birth, and phone number already exists.",
+      "user_facing_message": "It looks like you may already have an account. Please contact support or try logging in.",
+      "admin_notification_sent": true
+    }
+  },
+  {
+    "id": "GD-ONB-004",
+    "module": "member-onboarding",
+    "scenario": "Rate limiting: 4th registration attempt from same IP within 1 hour",
+    "priority": "P1",
+    "linked_reqs": ["REQ-ONB-008", "REQ-FRD-004", "REQ-SEC-001"],
+    "input": {
+      "step": "registration_initiation",
+      "ip_address": "203.0.113.55",
+      "previous_attempts_from_ip": [
+        { "timestamp": "2026-03-29T10:02:00Z", "status": "completed" },
+        { "timestamp": "2026-03-29T10:15:00Z", "status": "abandoned" },
+        { "timestamp": "2026-03-29T10:28:00Z", "status": "flagged" }
+      ],
+      "current_attempt_timestamp": "2026-03-29T10:45:00Z",
+      "rate_limit_window_minutes": 60,
+      "rate_limit_max_attempts": 3,
+      "phone": "+1-555-0300",
+      "email": "attempt4@gmail.com",
+      "first_name": "Test",
+      "last_name": "User"
+    },
+    "expected_output": {
+      "rate_limit_exceeded": true,
+      "application_status": "blocked",
+      "block_reason": "Too many registration attempts from this network. Please try again later.",
+      "retry_after_seconds": 900,
+      "retry_after_timestamp": "2026-03-29T11:02:00Z",
+      "member_id_generated": false,
+      "ip_flagged": true,
+      "admin_notification_sent": true,
+      "admin_notification_type": "rate_limit_ip_block",
+      "http_status": 429
+    }
+  },
+  {
+    "id": "GD-ONB-005",
+    "module": "member-onboarding",
+    "scenario": "Invalid referral: referrer ID does not exist in system",
+    "priority": "P1",
+    "linked_reqs": ["REQ-ONB-009", "REQ-FRD-005"],
+    "input": {
+      "step": "full_registration_flow",
+      "phone": "+1-555-0250",
+      "phone_otp": "593017",
+      "otp_verified": true,
+      "email": "anita.reddy@gmail.com",
+      "email_verified": true,
+      "first_name": "Anita",
+      "last_name": "Reddy",
+      "date_of_birth": "1992-07-22",
+      "address": {
+        "line1": "890 Maple Ave",
+        "city": "Irving",
+        "state": "TX",
+        "zip": "75039",
+        "country": "US"
+      },
+      "referral_code": "REF-MBR-99999",
+      "referral_valid": false,
+      "referral_lookup_result": "not_found",
+      "membership_tier": "individual",
+      "payment_method": "paypal",
+      "payment_amount": 150.00,
+      "payment_currency": "USD",
+      "payment_status": "completed",
+      "ip_address": "96.45.12.78",
+      "form_completion_time_seconds": 280
+    },
+    "expected_output": {
+      "fraud_score": 35,
+      "fraud_flags": [
+        "invalid_referral_code"
+      ],
+      "phone_type": "mobile",
+      "email_domain_disposable": false,
+      "duplicate_detected": false,
+      "referral_status": "invalid",
+      "application_status": "flagged_for_review",
+      "auto_approved": false,
+      "member_id_generated": false,
+      "welcome_email_sent": false,
+      "admin_notification_sent": true,
+      "admin_notification_type": "invalid_referral_review",
+      "review_note": "Referral code REF-MBR-99999 does not match any active member. Manual verification required."
+    }
+  },
+  {
+    "id": "GD-ONB-006",
+    "module": "member-onboarding",
+    "scenario": "Auto-approve: low fraud score below tenant threshold, all verifications pass",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ONB-010", "REQ-ONB-011", "REQ-TEN-003"],
+    "input": {
+      "step": "full_registration_flow",
+      "phone": "+1-555-0175",
+      "phone_otp": "610384",
+      "otp_verified": true,
+      "email": "venkat.krishna@outlook.com",
+      "email_verified": true,
+      "first_name": "Venkat",
+      "last_name": "Krishna",
+      "date_of_birth": "1985-11-08",
+      "address": {
+        "line1": "2200 Preston Rd",
+        "city": "Frisco",
+        "state": "TX",
+        "zip": "75034",
+        "country": "US"
+      },
+      "referral_code": "REF-MBR-00100",
+      "referral_valid": true,
+      "membership_tier": "individual",
+      "payment_method": "paynow",
+      "payment_amount": 150.00,
+      "payment_currency": "USD",
+      "payment_status": "completed",
+      "ip_address": "68.200.44.12",
+      "form_completion_time_seconds": 410,
+      "tenant_auto_approve_threshold": 30
+    },
+    "expected_output": {
+      "fraud_score": 15,
+      "fraud_flags": [],
+      "phone_type": "mobile",
+      "email_domain_disposable": false,
+      "duplicate_detected": false,
+      "referral_status": "valid",
+      "application_status": "approved",
+      "auto_approved": true,
+      "auto_approve_reason": "Fraud score 15 is below tenant threshold of 30. All verifications passed.",
+      "member_id_generated": true,
+      "member_id_pattern": "^MBR-[A-Z0-9]{8}$",
+      "welcome_email_sent": true,
+      "welcome_sms_sent": true,
+      "membership_start_date": "2026-03-29",
+      "membership_expiry_date": "2027-03-29",
+      "referrer_reward_applied": true,
+      "referrer_member_id": "MBR-00100REF"
+    }
+  },
+  {
+    "id": "GD-ONB-007",
+    "module": "member-onboarding",
+    "scenario": "Family membership: primary member + spouse + 2 children registered together",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ONB-012", "REQ-ONB-013", "REQ-PAY-002"],
+    "input": {
+      "step": "full_registration_flow",
+      "phone": "+1-555-0310",
+      "phone_otp": "827451",
+      "otp_verified": true,
+      "email": "raj.patel@gmail.com",
+      "email_verified": true,
+      "membership_tier": "family",
+      "primary_member": {
+        "first_name": "Raj",
+        "last_name": "Patel",
+        "date_of_birth": "1980-05-20",
+        "role": "primary"
+      },
+      "family_members": [
+        {
+          "first_name": "Meena",
+          "last_name": "Patel",
+          "date_of_birth": "1982-09-14",
+          "relationship": "spouse",
+          "role": "adult"
+        },
+        {
+          "first_name": "Arjun",
+          "last_name": "Patel",
+          "date_of_birth": "2012-02-10",
+          "relationship": "child",
+          "role": "minor"
+        },
+        {
+          "first_name": "Kavya",
+          "last_name": "Patel",
+          "date_of_birth": "2015-08-25",
+          "relationship": "child",
+          "role": "minor"
+        }
+      ],
+      "address": {
+        "line1": "4500 Legacy Dr",
+        "city": "Frisco",
+        "state": "TX",
+        "zip": "75034",
+        "country": "US"
+      },
+      "referral_code": "REF-MBR-00200",
+      "referral_valid": true,
+      "payment_method": "paypal",
+      "payment_amount": 350.00,
+      "payment_currency": "USD",
+      "payment_status": "completed",
+      "ip_address": "70.115.88.33",
+      "form_completion_time_seconds": 520
+    },
+    "expected_output": {
+      "fraud_score": 5,
+      "fraud_flags": [],
+      "duplicate_detected": false,
+      "application_status": "approved",
+      "auto_approved": true,
+      "membership_tier_applied": "family",
+      "total_members_registered": 4,
+      "members_created": [
+        {
+          "name": "Raj Patel",
+          "role": "primary",
+          "member_id_generated": true,
+          "member_id_pattern": "^MBR-[A-Z0-9]{8}$"
+        },
+        {
+          "name": "Meena Patel",
+          "role": "adult",
+          "member_id_generated": true,
+          "member_id_pattern": "^MBR-[A-Z0-9]{8}$",
+          "linked_to_primary": true
+        },
+        {
+          "name": "Arjun Patel",
+          "role": "minor",
+          "member_id_generated": true,
+          "member_id_pattern": "^MBR-[A-Z0-9]{8}$",
+          "linked_to_primary": true
+        },
+        {
+          "name": "Kavya Patel",
+          "role": "minor",
+          "member_id_generated": true,
+          "member_id_pattern": "^MBR-[A-Z0-9]{8}$",
+          "linked_to_primary": true
+        }
+      ],
+      "family_pricing": {
+        "base_family_fee": 350.00,
+        "primary_included": true,
+        "spouse_included": true,
+        "children_included": 2,
+        "max_children_included": 3,
+        "additional_child_fee": 0.00
+      },
+      "welcome_email_sent": true,
+      "welcome_sms_sent": true,
+      "membership_start_date": "2026-03-29",
+      "membership_expiry_date": "2027-03-29"
+    }
+  },
+  {
+    "id": "GD-EVT-001",
+    "module": "event-registration",
+    "scenario": "Happy path: member registers for paid event with 2 adults and 1 child",
+    "priority": "P0",
+    "linked_reqs": ["REQ-EVT-001", "REQ-EVT-002", "REQ-PAY-003"],
+    "input": {
+      "member_id": "MBR-A1B2C3D4",
+      "member_status": "active",
+      "event_id": "EVT-2026-DIWALI",
+      "event_name": "Diwali Cultural Celebration 2026",
+      "event_type": "paid",
+      "event_date": "2026-10-18T17:00:00Z",
+      "event_capacity": 200,
+      "event_current_registrations": 145,
+      "pricing": {
+        "adult": 15.00,
+        "child": 8.00,
+        "senior": 10.00,
+        "currency": "USD"
+      },
+      "attendees": [
+        { "name": "Raj Patel", "type": "adult", "member_id": "MBR-A1B2C3D4" },
+        { "name": "Meena Patel", "type": "adult", "member_id": "MBR-E5F6G7H8" },
+        { "name": "Arjun Patel", "type": "child", "member_id": "MBR-I9J0K1L2" }
+      ],
+      "payment_method": "paypal"
+    },
+    "expected_output": {
+      "registration_id_generated": true,
+      "registration_id_pattern": "^REG-[A-Z0-9]{10}$",
+      "registration_status": "confirmed",
+      "total_attendees": 3,
+      "price_breakdown": {
+        "adults": { "count": 2, "unit_price": 15.00, "subtotal": 30.00 },
+        "children": { "count": 1, "unit_price": 8.00, "subtotal": 8.00 }
+      },
+      "total_amount": 38.00,
+      "currency": "USD",
+      "payment_status": "completed",
+      "confirmation_email_sent": true,
+      "calendar_invite_sent": true,
+      "event_spots_remaining": 52,
+      "qr_code_generated": true
+    }
+  },
+  {
+    "id": "GD-EVT-002",
+    "module": "event-registration",
+    "scenario": "Free event: member registers, no payment required, confirmed immediately",
+    "priority": "P0",
+    "linked_reqs": ["REQ-EVT-003"],
+    "input": {
+      "member_id": "MBR-X1Y2Z3W4",
+      "member_status": "active",
+      "event_id": "EVT-2026-YOGA",
+      "event_name": "Community Yoga Session",
+      "event_type": "free",
+      "event_date": "2026-04-12T08:00:00Z",
+      "event_capacity": 50,
+      "event_current_registrations": 22,
+      "pricing": {
+        "adult": 0.00,
+        "child": 0.00,
+        "currency": "USD"
+      },
+      "attendees": [
+        { "name": "Sita Devi", "type": "adult", "member_id": "MBR-X1Y2Z3W4" }
+      ],
+      "payment_method": null
+    },
+    "expected_output": {
+      "registration_id_generated": true,
+      "registration_id_pattern": "^REG-[A-Z0-9]{10}$",
+      "registration_status": "confirmed",
+      "total_attendees": 1,
+      "total_amount": 0.00,
+      "payment_required": false,
+      "payment_status": "not_applicable",
+      "confirmation_email_sent": true,
+      "calendar_invite_sent": true,
+      "event_spots_remaining": 27,
+      "qr_code_generated": true
+    }
+  },
+  {
+    "id": "GD-EVT-003",
+    "module": "event-registration",
+    "scenario": "Full event: no spots available, member added to waitlist",
+    "priority": "P0",
+    "linked_reqs": ["REQ-EVT-004", "REQ-EVT-005"],
+    "input": {
+      "member_id": "MBR-Q1R2S3T4",
+      "member_status": "active",
+      "event_id": "EVT-2026-HOLI",
+      "event_name": "Holi Festival 2026",
+      "event_type": "paid",
+      "event_date": "2026-03-14T10:00:00Z",
+      "event_capacity": 300,
+      "event_current_registrations": 300,
+      "pricing": {
+        "adult": 20.00,
+        "child": 10.00,
+        "currency": "USD"
+      },
+      "attendees": [
+        { "name": "Arun Kumar", "type": "adult", "member_id": "MBR-Q1R2S3T4" }
+      ],
+      "payment_method": "paypal"
+    },
+    "expected_output": {
+      "registration_id_generated": true,
+      "registration_id_pattern": "^REG-[A-Z0-9]{10}$",
+      "registration_status": "waitlisted",
+      "waitlist_position": 1,
+      "total_attendees": 1,
+      "total_amount": 20.00,
+      "payment_status": "held_pending_promotion",
+      "payment_charged": false,
+      "confirmation_email_sent": true,
+      "confirmation_email_type": "waitlist_confirmation",
+      "event_spots_remaining": 0,
+      "estimated_promotion_likelihood": "low",
+      "waitlist_notification_message": "You are #1 on the waitlist. We'll notify you immediately if a spot opens up."
+    }
+  },
+  {
+    "id": "GD-EVT-004",
+    "module": "event-registration",
+    "scenario": "Waitlist promotion: spot opens, first waitlisted member auto-promoted and notified",
+    "priority": "P0",
+    "linked_reqs": ["REQ-EVT-005", "REQ-EVT-006"],
+    "input": {
+      "trigger": "cancellation_spot_released",
+      "event_id": "EVT-2026-HOLI",
+      "event_name": "Holi Festival 2026",
+      "cancelled_registration_id": "REG-CANCEL001A",
+      "spots_released": 1,
+      "waitlist": [
+        {
+          "registration_id": "REG-WAIT0001A",
+          "member_id": "MBR-Q1R2S3T4",
+          "member_name": "Arun Kumar",
+          "waitlist_position": 1,
+          "attendees": [{ "name": "Arun Kumar", "type": "adult" }],
+          "total_amount": 20.00,
+          "joined_waitlist_at": "2026-03-01T14:30:00Z"
+        },
+        {
+          "registration_id": "REG-WAIT0002B",
+          "member_id": "MBR-U5V6W7X8",
+          "member_name": "Deepa Rao",
+          "waitlist_position": 2,
+          "attendees": [{ "name": "Deepa Rao", "type": "adult" }],
+          "total_amount": 20.00,
+          "joined_waitlist_at": "2026-03-02T09:15:00Z"
+        }
+      ]
+    },
+    "expected_output": {
+      "promoted_registration_id": "REG-WAIT0001A",
+      "promoted_member_id": "MBR-Q1R2S3T4",
+      "new_registration_status": "confirmed",
+      "payment_charged": true,
+      "payment_amount": 20.00,
+      "promotion_email_sent": true,
+      "promotion_sms_sent": true,
+      "promotion_notification_message": "Great news! A spot has opened up for Holi Festival 2026. Your registration is now confirmed.",
+      "calendar_invite_sent": true,
+      "qr_code_generated": true,
+      "remaining_waitlist": [
+        {
+          "registration_id": "REG-WAIT0002B",
+          "new_waitlist_position": 1
+        }
+      ],
+      "waitlist_position_update_notifications_sent": true
+    }
+  },
+  {
+    "id": "GD-EVT-005",
+    "module": "event-registration",
+    "scenario": "Cancellation: member cancels registration, refund processed, spot released",
+    "priority": "P0",
+    "linked_reqs": ["REQ-EVT-007", "REQ-PAY-004"],
+    "input": {
+      "registration_id": "REG-ABCDEF1234",
+      "member_id": "MBR-A1B2C3D4",
+      "event_id": "EVT-2026-DIWALI",
+      "event_name": "Diwali Cultural Celebration 2026",
+      "event_date": "2026-10-18T17:00:00Z",
+      "cancellation_timestamp": "2026-09-20T11:00:00Z",
+      "days_before_event": 28,
+      "original_payment_amount": 38.00,
+      "payment_method": "paypal",
+      "cancellation_policy": {
+        "full_refund_days_before": 14,
+        "partial_refund_days_before": 7,
+        "partial_refund_percentage": 50,
+        "no_refund_days_before": 0
+      },
+      "attendees_count": 3,
+      "has_waitlist": true
+    },
+    "expected_output": {
+      "cancellation_status": "confirmed",
+      "refund_type": "full",
+      "refund_amount": 38.00,
+      "refund_method": "paypal",
+      "refund_status": "processing",
+      "refund_estimated_days": 5,
+      "spots_released": 3,
+      "waitlist_promotion_triggered": true,
+      "cancellation_email_sent": true,
+      "cancellation_email_includes_refund_details": true,
+      "event_spots_remaining_after": 3
+    }
+  },
+  {
+    "id": "GD-EVT-006",
+    "module": "event-registration",
+    "scenario": "Non-member attempts to register, redirected to join flow",
+    "priority": "P1",
+    "linked_reqs": ["REQ-EVT-008", "REQ-ONB-001"],
+    "input": {
+      "member_id": null,
+      "authenticated": false,
+      "event_id": "EVT-2026-DIWALI",
+      "event_name": "Diwali Cultural Celebration 2026",
+      "session_id": "SES-ANON-88234",
+      "referrer_url": "/events/diwali-2026"
+    },
+    "expected_output": {
+      "registration_allowed": false,
+      "redirect_to": "/join?returnTo=/events/diwali-2026/register",
+      "user_facing_message": "Please join our community to register for events. Membership takes just a few minutes!",
+      "join_prompt_displayed": true,
+      "event_details_visible": true,
+      "pricing_visible": true,
+      "register_button_state": "disabled_with_join_prompt",
+      "analytics_event": {
+        "name": "non_member_registration_attempt",
+        "properties": {
+          "event_id": "EVT-2026-DIWALI",
+          "session_id": "SES-ANON-88234"
+        }
+      }
+    }
+  },
+  {
+    "id": "GD-AI-001",
+    "module": "ai-chatbot",
+    "scenario": "English query about upcoming events returns formatted event list",
+    "priority": "P1",
+    "linked_reqs": ["REQ-AI-001", "REQ-AI-002"],
+    "input": {
+      "member_id": "MBR-A1B2C3D4",
+      "query": "What events are coming up this month?",
+      "language_detected": "en",
+      "conversation_id": "CONV-001-ABC",
+      "context": {
+        "current_date": "2026-03-29",
+        "member_community": "Telugu Association of North Texas",
+        "upcoming_events": [
+          {
+            "event_id": "EVT-2026-UGADI",
+            "name": "Ugadi Celebration",
+            "date": "2026-04-05T16:00:00Z",
+            "type": "paid",
+            "price_adult": 15.00,
+            "spots_remaining": 42
+          },
+          {
+            "event_id": "EVT-2026-YOGA",
+            "name": "Community Yoga Session",
+            "date": "2026-04-12T08:00:00Z",
+            "type": "free",
+            "spots_remaining": 28
+          },
+          {
+            "event_id": "EVT-2026-CRICKET",
+            "name": "Spring Cricket Tournament",
+            "date": "2026-04-19T09:00:00Z",
+            "type": "paid",
+            "price_adult": 25.00,
+            "spots_remaining": 60
+          }
+        ]
+      }
+    },
+    "expected_output": {
+      "response_language": "en",
+      "response_type": "event_list",
+      "response_contains_event_count": 3,
+      "response_includes_dates": true,
+      "response_includes_pricing": true,
+      "response_includes_registration_links": true,
+      "sample_response_pattern": "Here are the upcoming events.*Ugadi Celebration.*April 5.*Community Yoga.*April 12.*Cricket Tournament.*April 19",
+      "suggested_actions": [
+        { "label": "Register for Ugadi Celebration", "action": "register", "event_id": "EVT-2026-UGADI" },
+        { "label": "Register for Yoga Session", "action": "register", "event_id": "EVT-2026-YOGA" },
+        { "label": "Register for Cricket Tournament", "action": "register", "event_id": "EVT-2026-CRICKET" }
+      ],
+      "confidence_score_min": 0.9,
+      "fallback_triggered": false
+    }
+  },
+  {
+    "id": "GD-AI-002",
+    "module": "ai-chatbot",
+    "scenario": "Telugu language query about membership returns response in Telugu",
+    "priority": "P1",
+    "linked_reqs": ["REQ-AI-001", "REQ-AI-003"],
+    "input": {
+      "member_id": null,
+      "query": "మెంబర్‌షిప్ ఫీజు ఎంత?",
+      "language_detected": "te",
+      "conversation_id": "CONV-002-DEF",
+      "context": {
+        "current_date": "2026-03-29",
+        "community_name": "Telugu Association of North Texas",
+        "membership_tiers": [
+          {
+            "tier": "individual",
+            "annual_fee": 150.00,
+            "currency": "USD",
+            "benefits": ["Event discounts", "Voting rights", "Newsletter"]
+          },
+          {
+            "tier": "family",
+            "annual_fee": 350.00,
+            "currency": "USD",
+            "benefits": ["All individual benefits", "Spouse included", "Up to 3 children included", "Family event pricing"]
+          },
+          {
+            "tier": "student",
+            "annual_fee": 50.00,
+            "currency": "USD",
+            "benefits": ["Event discounts", "Newsletter", "Student networking events"]
+          }
+        ]
+      }
+    },
+    "expected_output": {
+      "response_language": "te",
+      "response_type": "membership_info",
+      "response_contains_pricing": true,
+      "response_contains_tiers": true,
+      "response_script": "Telugu",
+      "response_includes_all_tiers": true,
+      "sample_response_contains": "మెంబర్‌షిప్",
+      "suggested_actions": [
+        { "label": "సభ్యత్వం కోసం చేరండి", "action": "join", "url": "/join" }
+      ],
+      "confidence_score_min": 0.85,
+      "fallback_triggered": false,
+      "translation_source": "ai_native"
+    }
+  },
+  {
+    "id": "GD-AI-003",
+    "module": "ai-chatbot",
+    "scenario": "Unknown or out-of-scope query triggers graceful fallback with suggestions",
+    "priority": "P2",
+    "linked_reqs": ["REQ-AI-004"],
+    "input": {
+      "member_id": "MBR-A1B2C3D4",
+      "query": "Can you book me a flight to Hyderabad?",
+      "language_detected": "en",
+      "conversation_id": "CONV-003-GHI",
+      "context": {
+        "current_date": "2026-03-29",
+        "community_name": "Telugu Association of North Texas"
+      }
+    },
+    "expected_output": {
+      "response_language": "en",
+      "response_type": "fallback",
+      "confidence_score_below": 0.3,
+      "fallback_triggered": true,
+      "response_tone": "helpful_and_friendly",
+      "sample_response_pattern": "I'm sorry.*can't help with.*flight.*Here are some things I can help you with",
+      "suggested_topics": [
+        "Upcoming events",
+        "Membership information",
+        "Community news",
+        "Contact support"
+      ],
+      "suggested_actions": [
+        { "label": "View upcoming events", "action": "navigate", "url": "/events" },
+        { "label": "Membership details", "action": "navigate", "url": "/membership" },
+        { "label": "Contact support", "action": "navigate", "url": "/support" }
+      ],
+      "escalation_option": true,
+      "escalation_label": "Talk to a human"
+    }
+  },
+  {
+    "id": "GD-ADM-001",
+    "module": "admin-operations",
+    "scenario": "Admin approves application with low fraud score, member activated and welcomed",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ADM-001", "REQ-ONB-010"],
+    "input": {
+      "admin_id": "ADM-001",
+      "admin_role": "community_admin",
+      "action": "approve_application",
+      "application_id": "APP-20260329-001",
+      "applicant": {
+        "first_name": "Venkat",
+        "last_name": "Krishna",
+        "email": "venkat.krishna@outlook.com",
+        "phone": "+1-555-0175"
+      },
+      "fraud_score": 15,
+      "fraud_flags": [],
+      "approval_note": "Clean application, referral verified manually."
+    },
+    "expected_output": {
+      "application_status": "approved",
+      "member_id_generated": true,
+      "member_id_pattern": "^MBR-[A-Z0-9]{8}$",
+      "member_status": "active",
+      "welcome_email_sent": true,
+      "welcome_email_template": "member_welcome_v1",
+      "welcome_sms_sent": true,
+      "membership_start_date": "2026-03-29",
+      "membership_expiry_date": "2027-03-29",
+      "admin_audit_log": {
+        "action": "approve_application",
+        "admin_id": "ADM-001",
+        "application_id": "APP-20260329-001",
+        "timestamp_recorded": true,
+        "note": "Clean application, referral verified manually."
+      },
+      "applicant_notification": {
+        "channel": "email",
+        "subject_contains": "Welcome",
+        "body_contains_member_id": true
+      }
+    }
+  },
+  {
+    "id": "GD-ADM-002",
+    "module": "admin-operations",
+    "scenario": "Admin rejects application with high fraud score, rejection email with reason sent",
+    "priority": "P0",
+    "linked_reqs": ["REQ-ADM-002", "REQ-FRD-001"],
+    "input": {
+      "admin_id": "ADM-001",
+      "admin_role": "community_admin",
+      "action": "reject_application",
+      "application_id": "APP-20260329-002",
+      "applicant": {
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "randomuser8832@tempmail.xyz",
+        "phone": "+1-555-0199"
+      },
+      "fraud_score": 82,
+      "fraud_flags": [
+        "disposable_email_domain",
+        "voip_phone_number",
+        "no_referral_code",
+        "form_completed_under_30_seconds"
+      ],
+      "rejection_reason": "Application flagged for multiple fraud indicators including disposable email and VoIP phone number.",
+      "rejection_category": "fraud_suspected"
+    },
+    "expected_output": {
+      "application_status": "rejected",
+      "member_id_generated": false,
+      "rejection_email_sent": true,
+      "rejection_email_template": "application_rejected_v1",
+      "rejection_email_includes_reason": true,
+      "rejection_email_includes_appeal_info": true,
+      "appeal_window_days": 30,
+      "appeal_url_pattern": "^/appeals/APP-20260329-002$",
+      "admin_audit_log": {
+        "action": "reject_application",
+        "admin_id": "ADM-001",
+        "application_id": "APP-20260329-002",
+        "timestamp_recorded": true,
+        "reason": "fraud_suspected",
+        "fraud_score": 82
+      },
+      "applicant_data_retained": true,
+      "retention_period_days": 90,
+      "blacklist_added": false
+    }
+  },
+  {
+    "id": "GD-ADM-003",
+    "module": "admin-operations",
+    "scenario": "Bulk approve 3 applications with fraud scores below threshold",
+    "priority": "P1",
+    "linked_reqs": ["REQ-ADM-003", "REQ-ADM-004"],
+    "input": {
+      "admin_id": "ADM-001",
+      "admin_role": "community_admin",
+      "action": "bulk_approve",
+      "applications": [
+        {
+          "application_id": "APP-20260329-010",
+          "first_name": "Lakshmi",
+          "last_name": "Naidu",
+          "fraud_score": 8,
+          "fraud_flags": []
+        },
+        {
+          "application_id": "APP-20260329-011",
+          "first_name": "Ravi",
+          "last_name": "Teja",
+          "fraud_score": 12,
+          "fraud_flags": []
+        },
+        {
+          "application_id": "APP-20260329-012",
+          "first_name": "Sunitha",
+          "last_name": "Reddy",
+          "fraud_score": 22,
+          "fraud_flags": []
+        }
+      ],
+      "bulk_approval_note": "Batch review: all applications clean, referrals verified.",
+      "tenant_auto_approve_threshold": 30
+    },
+    "expected_output": {
+      "bulk_operation_id_generated": true,
+      "bulk_operation_id_pattern": "^BULK-[A-Z0-9]{8}$",
+      "total_processed": 3,
+      "total_approved": 3,
+      "total_failed": 0,
+      "results": [
+        {
+          "application_id": "APP-20260329-010",
+          "status": "approved",
+          "member_id_generated": true,
+          "welcome_email_sent": true
+        },
+        {
+          "application_id": "APP-20260329-011",
+          "status": "approved",
+          "member_id_generated": true,
+          "welcome_email_sent": true
+        },
+        {
+          "application_id": "APP-20260329-012",
+          "status": "approved",
+          "member_id_generated": true,
+          "welcome_email_sent": true
+        }
+      ],
+      "admin_audit_log": {
+        "action": "bulk_approve",
+        "admin_id": "ADM-001",
+        "bulk_operation_id_recorded": true,
+        "applications_count": 3,
+        "timestamp_recorded": true
+      },
+      "admin_confirmation_message": "Successfully approved 3 of 3 applications. Welcome emails have been sent."
+    }
+  },
+  {
+    "id": "GD-ADM-004",
+    "module": "admin-operations",
+    "scenario": "AI copilot generates event listing from plain text description",
+    "priority": "P2",
+    "linked_reqs": ["REQ-ADM-005", "REQ-AI-005"],
+    "input": {
+      "admin_id": "ADM-001",
+      "admin_role": "community_admin",
+      "action": "ai_create_event",
+      "plain_text_description": "We're having a Sankranti celebration on January 14th 2027 from 4pm to 9pm at the Frisco Community Center, 8000 McKinney Rd. Adults $20, kids $10, seniors $12. Max 250 people. There will be kite flying, rangoli competition, and traditional food. Families welcome. Volunteers needed for setup at 2pm.",
+      "community_id": "COMM-TANT-001",
+      "community_timezone": "America/Chicago"
+    },
+    "expected_output": {
+      "generated_event": {
+        "name": "Sankranti Celebration 2027",
+        "description_generated": true,
+        "description_word_count_min": 50,
+        "date_start": "2027-01-14T16:00:00-06:00",
+        "date_end": "2027-01-14T21:00:00-06:00",
+        "timezone": "America/Chicago",
+        "venue": {
+          "name": "Frisco Community Center",
+          "address": "8000 McKinney Rd, Frisco, TX"
+        },
+        "capacity": 250,
+        "pricing": {
+          "adult": 20.00,
+          "child": 10.00,
+          "senior": 12.00,
+          "currency": "USD"
+        },
+        "categories_extracted": ["cultural", "family", "festival"],
+        "activities_extracted": ["kite flying", "rangoli competition", "traditional food"],
+        "volunteer_call": {
+          "enabled": true,
+          "setup_time": "2027-01-14T14:00:00-06:00",
+          "description": "Volunteers needed for setup"
+        },
+        "family_friendly": true
+      },
+      "event_status": "draft",
+      "admin_review_required": true,
+      "ai_confidence_score_min": 0.88,
+      "fields_requiring_review": ["description", "categories"],
+      "preview_url_generated": true
+    }
+  },
+  {
+    "id": "GD-TEN-001",
+    "module": "tenant-configuration",
+    "scenario": "Admin changes branding colors, UI updates immediately",
+    "priority": "P1",
+    "linked_reqs": ["REQ-TEN-001", "REQ-TEN-002"],
+    "input": {
+      "admin_id": "ADM-001",
+      "tenant_id": "TENANT-TANT-001",
+      "action": "update_branding",
+      "branding_changes": {
+        "primary_color": "#E65100",
+        "secondary_color": "#1B5E20",
+        "accent_color": "#FFD600",
+        "logo_url": "https://cdn.communityhub.io/tenants/tant/logo-v2.png",
+        "favicon_url": "https://cdn.communityhub.io/tenants/tant/favicon-v2.ico",
+        "community_name_display": "Telugu Association of North Texas"
+      },
+      "previous_branding": {
+        "primary_color": "#1976D2",
+        "secondary_color": "#388E3C",
+        "accent_color": "#FFC107"
+      }
+    },
+    "expected_output": {
+      "update_status": "applied",
+      "css_variables_updated": {
+        "--color-primary": "#E65100",
+        "--color-secondary": "#1B5E20",
+        "--color-accent": "#FFD600"
+      },
+      "cache_invalidated": true,
+      "cdn_purge_triggered": true,
+      "effective_immediately": true,
+      "preview_url_generated": true,
+      "rollback_available": true,
+      "rollback_snapshot_id_pattern": "^SNAP-[A-Z0-9]{8}$",
+      "admin_audit_log": {
+        "action": "update_branding",
+        "admin_id": "ADM-001",
+        "tenant_id": "TENANT-TANT-001",
+        "changes_recorded": true,
+        "previous_values_stored": true
+      },
+      "active_sessions_notification": "Theme updated. Users will see new colors on next page load."
+    }
+  },
+  {
+    "id": "GD-TEN-002",
+    "module": "tenant-configuration",
+    "scenario": "Admin disables OTP step, onboarding skips phone verification",
+    "priority": "P1",
+    "linked_reqs": ["REQ-TEN-003", "REQ-ONB-014"],
+    "input": {
+      "admin_id": "ADM-001",
+      "tenant_id": "TENANT-TANT-001",
+      "action": "update_onboarding_config",
+      "config_changes": {
+        "phone_otp_required": false,
+        "email_verification_required": true,
+        "referral_required": true
+      },
+      "previous_config": {
+        "phone_otp_required": true,
+        "email_verification_required": true,
+        "referral_required": true
+      }
+    },
+    "expected_output": {
+      "update_status": "applied",
+      "onboarding_steps_updated": [
+        { "step": "phone_otp", "enabled": false, "order": null },
+        { "step": "email_verification", "enabled": true, "order": 1 },
+        { "step": "personal_details", "enabled": true, "order": 2 },
+        { "step": "referral", "enabled": true, "order": 3 },
+        { "step": "payment", "enabled": true, "order": 4 }
+      ],
+      "total_onboarding_steps": 4,
+      "phone_collection": "optional_no_verification",
+      "effective_immediately": true,
+      "warning_message": "Disabling phone OTP reduces fraud detection capability. Fraud scoring will rely more heavily on other signals.",
+      "admin_audit_log": {
+        "action": "update_onboarding_config",
+        "admin_id": "ADM-001",
+        "changes": { "phone_otp_required": { "from": true, "to": false } },
+        "timestamp_recorded": true
+      }
+    }
+  },
+  {
+    "id": "GD-TEN-003",
+    "module": "tenant-configuration",
+    "scenario": "Admin sets auto-approve threshold to 50, applications below 50 auto-approved",
+    "priority": "P1",
+    "linked_reqs": ["REQ-TEN-003", "REQ-ONB-010", "REQ-ONB-011"],
+    "input": {
+      "admin_id": "ADM-001",
+      "tenant_id": "TENANT-TANT-001",
+      "action": "update_fraud_config",
+      "config_changes": {
+        "auto_approve_threshold": 50
+      },
+      "previous_config": {
+        "auto_approve_threshold": 30
+      },
+      "pending_applications_affected": [
+        { "application_id": "APP-20260329-020", "fraud_score": 35, "current_status": "pending_review" },
+        { "application_id": "APP-20260329-021", "fraud_score": 42, "current_status": "pending_review" },
+        { "application_id": "APP-20260329-022", "fraud_score": 55, "current_status": "pending_review" }
+      ]
+    },
+    "expected_output": {
+      "update_status": "applied",
+      "new_threshold": 50,
+      "previous_threshold": 30,
+      "effective_immediately": true,
+      "retroactive_auto_approve": {
+        "enabled": true,
+        "applications_evaluated": 3,
+        "applications_auto_approved": 2,
+        "applications_still_pending": 1,
+        "approved_details": [
+          { "application_id": "APP-20260329-020", "fraud_score": 35, "new_status": "approved" },
+          { "application_id": "APP-20260329-021", "fraud_score": 42, "new_status": "approved" }
+        ],
+        "still_pending_details": [
+          { "application_id": "APP-20260329-022", "fraud_score": 55, "reason": "Score 55 exceeds new threshold of 50" }
+        ]
+      },
+      "admin_audit_log": {
+        "action": "update_fraud_config",
+        "admin_id": "ADM-001",
+        "changes": { "auto_approve_threshold": { "from": 30, "to": 50 } },
+        "retroactive_approvals": 2,
+        "timestamp_recorded": true
+      },
+      "warning_message": "Raising the auto-approve threshold will reduce manual reviews but may increase fraud risk. 2 pending applications were auto-approved retroactively."
+    }
+  },
+  {
+    "id": "GD-TEN-004",
+    "module": "tenant-configuration",
+    "scenario": "Admin enables PayNow and disables PayPal, only PayNow shown in payment options",
+    "priority": "P1",
+    "linked_reqs": ["REQ-TEN-004", "REQ-PAY-005"],
+    "input": {
+      "admin_id": "ADM-001",
+      "tenant_id": "TENANT-TANT-001",
+      "action": "update_payment_config",
+      "config_changes": {
+        "payment_methods": {
+          "paypal": { "enabled": false },
+          "paynow": { "enabled": true, "qr_code_url": "https://cdn.communityhub.io/tenants/tant/paynow-qr.png", "account_id": "PN-TANT-001" },
+          "stripe": { "enabled": false },
+          "manual_bank_transfer": { "enabled": false }
+        }
+      },
+      "previous_config": {
+        "payment_methods": {
+          "paypal": { "enabled": true },
+          "paynow": { "enabled": false },
+          "stripe": { "enabled": false },
+          "manual_bank_transfer": { "enabled": false }
+        }
+      }
+    },
+    "expected_output": {
+      "update_status": "applied",
+      "active_payment_methods": ["paynow"],
+      "disabled_payment_methods": ["paypal", "stripe", "manual_bank_transfer"],
+      "effective_immediately": true,
+      "payment_ui_updated": {
+        "paynow_visible": true,
+        "paynow_qr_displayed": true,
+        "paypal_visible": false,
+        "stripe_visible": false,
+        "bank_transfer_visible": false
+      },
+      "in_progress_payments_affected": {
+        "paypal_pending_count": 0,
+        "note": "No in-progress PayPal payments affected. Existing completed transactions remain unaffected."
+      },
+      "admin_audit_log": {
+        "action": "update_payment_config",
+        "admin_id": "ADM-001",
+        "changes": {
+          "paypal": { "from": "enabled", "to": "disabled" },
+          "paynow": { "from": "disabled", "to": "enabled" }
+        },
+        "timestamp_recorded": true
+      },
+      "validation": {
+        "at_least_one_method_active": true,
+        "paynow_credentials_valid": true
+      }
+    }
+  },
+  {
+    "id": "GD-PAY-001",
+    "module": "payment",
+    "scenario": "PayPal successful payment for event registration",
+    "priority": "P0",
+    "linked_reqs": ["REQ-PAY-001", "REQ-PAY-003", "REQ-EVT-002"],
+    "input": {
+      "payment_method": "paypal",
+      "payment_context": "event_registration",
+      "registration_id": "REG-NEWREG001A",
+      "member_id": "MBR-A1B2C3D4",
+      "amount": 38.00,
+      "currency": "USD",
+      "paypal_order_id": "PAY-5YK12345AB678901C",
+      "paypal_payer_email": "priya.sharma@gmail.com",
+      "paypal_capture_status": "COMPLETED",
+      "paypal_capture_id": "CAP-8HN12345AB678901C",
+      "idempotency_key": "IDEM-REG-NEWREG001A-001"
+    },
+    "expected_output": {
+      "payment_status": "completed",
+      "payment_id_generated": true,
+      "payment_id_pattern": "^PAY-[A-Z0-9]{12}$",
+      "amount_charged": 38.00,
+      "currency": "USD",
+      "processor": "paypal",
+      "processor_transaction_id": "CAP-8HN12345AB678901C",
+      "registration_status_updated": "confirmed",
+      "receipt_email_sent": true,
+      "receipt_includes": ["amount", "event_name", "attendees", "transaction_id"],
+      "webhook_processed": true,
+      "idempotency_check": "new_payment",
+      "audit_log": {
+        "action": "payment_completed",
+        "member_id": "MBR-A1B2C3D4",
+        "amount": 38.00,
+        "processor": "paypal",
+        "timestamp_recorded": true
+      }
+    }
+  },
+  {
+    "id": "GD-PAY-002",
+    "module": "payment",
+    "scenario": "PayNow QR code scanned and payment confirmed",
+    "priority": "P0",
+    "linked_reqs": ["REQ-PAY-006", "REQ-PAY-007"],
+    "input": {
+      "payment_method": "paynow",
+      "payment_context": "membership_registration",
+      "application_id": "APP-20260329-030",
+      "member_name": "Suresh Babu",
+      "amount": 150.00,
+      "currency": "USD",
+      "paynow_reference": "PN-20260329-030",
+      "qr_code_generated": true,
+      "payment_confirmation": {
+        "source": "paynow_webhook",
+        "reference": "PN-20260329-030",
+        "status": "SUCCESS",
+        "confirmed_amount": 150.00,
+        "confirmed_at": "2026-03-29T14:22:33Z"
+      },
+      "idempotency_key": "IDEM-APP-20260329-030-001"
+    },
+    "expected_output": {
+      "payment_status": "completed",
+      "payment_id_generated": true,
+      "payment_id_pattern": "^PAY-[A-Z0-9]{12}$",
+      "amount_charged": 150.00,
+      "currency": "USD",
+      "processor": "paynow",
+      "processor_reference": "PN-20260329-030",
+      "application_payment_status_updated": "paid",
+      "receipt_email_sent": true,
+      "qr_payment_flow": {
+        "qr_displayed": true,
+        "polling_interval_seconds": 5,
+        "max_polling_duration_seconds": 900,
+        "confirmation_received": true,
+        "ui_updated_to_success": true
+      },
+      "webhook_signature_verified": true,
+      "amount_match_verified": true,
+      "audit_log": {
+        "action": "payment_completed",
+        "processor": "paynow",
+        "reference": "PN-20260329-030",
+        "amount": 150.00,
+        "timestamp_recorded": true
+      }
+    }
+  },
+  {
+    "id": "GD-PAY-003",
+    "module": "payment",
+    "scenario": "Payment fails, registration held with retry available",
+    "priority": "P0",
+    "linked_reqs": ["REQ-PAY-008", "REQ-PAY-009"],
+    "input": {
+      "payment_method": "paypal",
+      "payment_context": "event_registration",
+      "registration_id": "REG-FAILPAY01A",
+      "member_id": "MBR-D4E5F6G7",
+      "amount": 20.00,
+      "currency": "USD",
+      "paypal_order_id": "PAY-FAIL12345AB6789",
+      "paypal_capture_status": "DECLINED",
+      "paypal_error_code": "INSTRUMENT_DECLINED",
+      "paypal_error_message": "The instrument presented was either declined by the processor or bank, or it can't be used for this payment.",
+      "idempotency_key": "IDEM-REG-FAILPAY01A-001",
+      "retry_attempt": 1
+    },
+    "expected_output": {
+      "payment_status": "failed",
+      "payment_id_generated": true,
+      "payment_id_pattern": "^PAY-[A-Z0-9]{12}$",
+      "failure_reason": "payment_declined",
+      "failure_message_user_facing": "Your payment was declined. Please try a different payment method or contact your bank.",
+      "registration_status": "payment_pending",
+      "registration_held": true,
+      "held_duration_minutes": 30,
+      "held_expiry_timestamp": "2026-03-29T15:22:00Z",
+      "retry_available": true,
+      "max_retries": 3,
+      "retries_remaining": 2,
+      "retry_url_generated": true,
+      "alternative_payment_methods_shown": true,
+      "spot_reserved_during_hold": true,
+      "failure_email_sent": true,
+      "failure_email_includes_retry_link": true,
+      "audit_log": {
+        "action": "payment_failed",
+        "member_id": "MBR-D4E5F6G7",
+        "amount": 20.00,
+        "processor": "paypal",
+        "error_code": "INSTRUMENT_DECLINED",
+        "retry_attempt": 1,
+        "timestamp_recorded": true
+      }
+    }
+  }
+]
