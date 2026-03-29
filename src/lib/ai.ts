@@ -1,9 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { FraudScore } from "@/types";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
+}
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -24,7 +24,7 @@ export async function chatWithAI(
   systemPrompt: string,
   model: string = DEFAULT_MODEL,
 ): Promise<string> {
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model,
     max_tokens: 2048,
     system: systemPrompt,

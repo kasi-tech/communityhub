@@ -1,7 +1,9 @@
 import { Resend } from "resend";
 import type { ReactElement } from "react";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY || '');
+}
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "noreply@communityhub.app";
@@ -20,7 +22,7 @@ interface SendEmailParams {
  * Send a transactional email via Resend.
  */
 export async function sendEmail({ to, subject, react }: SendEmailParams) {
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to: Array.isArray(to) ? to : [to],
     subject,
@@ -113,7 +115,7 @@ export async function sendPaymentReceipt({
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to: [to],
     subject: `Payment Receipt — ${itemName}`,
